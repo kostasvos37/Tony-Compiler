@@ -66,7 +66,7 @@ W [ \r\t\n]
 "tail" {return T_tail;}
 "true" {return T_true;}
 
-[1-9]{D}*|0 {return T_const;}
+{D}* {return T_const;}
 "+"|"-"|"*"|"/"|"%"|"=" {return yytext[0];}
 {L} {return T_id;} 
 \'.*\n { /* nothing */ }
