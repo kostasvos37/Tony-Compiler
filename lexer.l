@@ -34,7 +34,7 @@
 void ERROR (const char msg []);
 %}
 
-L [a-z]
+L [a-zA-Z]
 D [0-9]
 W [ \r\t\n]
 
@@ -68,7 +68,7 @@ W [ \r\t\n]
 
 {D}* {return T_const;}
 "+"|"-"|"*"|"/"|"%"|"=" {return yytext[0];}
-{L} {return T_id;} 
+{L}+({L}|{D}|"_"|"?")* {return T_id;} 
 \'.*\n { /* nothing */ }
 {W}+    { /* nothing */ }
 . {printf("error!\n"); exit (1);}
