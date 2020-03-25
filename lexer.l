@@ -1,4 +1,5 @@
 %option noyywrap
+%x COMMENT
 
 %{
 #define T_eof 0
@@ -47,6 +48,8 @@ O [\+\-\*\/\#\=\<\>]|"<>"|"<="|">="
 S [\(\)\[\]\,\;\:]|":="
 
 %%
+    int comment_counter = 0;
+
 "and" {return T_and;}
 "bool" {return T_bool;}
 "char" {return T_char;}
@@ -74,6 +77,7 @@ S [\(\)\[\]\,\;\:]|":="
 "tail" {return T_tail;}
 "true" {return T_true;}
 
+
 {D}* {return T_const;}
 {O} {return T_operator;}
 {S} {return T_seperator;}
@@ -81,9 +85,15 @@ S [\(\)\[\]\,\;\:]|":="
 "'"([\x20-\x26\x28-\x7e]|\\{E})"'" {return T_singlechar;}
 \"([\x20-\x21\x23-\x7e]|\\\")*\" {return T_string;}
 \%.*\n { /* One line comments */ }
-\<\*.*\*\> { /* Multiline Comments */ }
+\<\* { BEGIN(COMMENT); }
+<COMMENT>\<\* {++comment_counter;}
+<COMMENT>\*\> {if (comment_counter > 0) --comment_counter;
+                else BEGIN(INITIAL);}
+<COMMENT>\n             {/* do nothing */}
+<COMMENT>{L}*           {/* do nothing */}
 {W}+    { /* nothing */ }
 . {printf("error!\n"); exit (1);}
+
 
 %%
 
