@@ -30,6 +30,11 @@
 #define T_tail 1026
 #define T_true 1027
 #define T_const 1028
+#define T_singlechar 1029
+#define T_string 1030
+#define T_operator 1031
+#define T_seperator 1032
+
 
 void ERROR (const char msg []);
 %}
@@ -37,6 +42,9 @@ void ERROR (const char msg []);
 L [a-zA-Z]
 D [0-9]
 W [ \r\t\n]
+E [ntr0'"\\]|[x][0-9A-F][0-9A-F]
+O [\+\-\*\/\#\=\<\>]|"<>"|"<="|">="
+S [\(\)\[\]\,\;\:]|":="
 
 %%
 "and" {return T_and;}
@@ -67,9 +75,13 @@ W [ \r\t\n]
 "true" {return T_true;}
 
 {D}* {return T_const;}
-"+"|"-"|"*"|"/"|"%"|"=" {return yytext[0];}
+{O} {return T_operator;}
+{S} {return T_seperator;}
 {L}+({L}|{D}|"_"|"?")* {return T_id;} 
-\'.*\n { /* nothing */ }
+"'"([\x20-\x26\x28-\x7e]|\\{E})"'" {return T_singlechar;}
+\"([\x20-\x21\x23-\x7e]|\\\")*\" {return T_string;}
+\%.*\n { /* One line comments */ }
+\<\*.*\*\> { /* Multiline Comments */ }
 {W}+    { /* nothing */ }
 . {printf("error!\n"); exit (1);}
 
