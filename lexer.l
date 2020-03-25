@@ -91,6 +91,7 @@ S [\(\)\[\]\,\;\:]|":="
                 else BEGIN(INITIAL);}
 <COMMENT>\n             {/* do nothing */}
 <COMMENT>{L}*           {/* do nothing */}
+<COMMENT>"*"            {/* do nothing */}
 {W}+    { /* nothing */ }
 . {printf("error!\n"); exit (1);}
 
