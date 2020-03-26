@@ -46,6 +46,7 @@ W [ \r\t\n]
 E [ntr0'"\\]|[x][0-9A-F][0-9A-F]
 O [\+\-\*\/\#\=\<\>]|"<>"|"<="|">="
 S [\(\)\[\]\,\;\:]|":="
+P [\x20-\x7e]
 
 %%
     int comment_counter = 0;
@@ -79,25 +80,19 @@ S [\(\)\[\]\,\;\:]|":="
 
 
 {D}* {return T_const;}
-{O} {return T_operator;}
-{S} {return T_seperator;}
-{L}+({L}|{D}|\_|\?)* {return T_id;} 
-\'([\x20-\x26\x28-\x7e]|\\{E})\' {return T_singlechar;}
+{O}  {return T_operator;}
+{S}  {return T_seperator;}
+{L}+({L}|{D}|"_"|"?")* {return T_id;} 
+"'"([\x20-\x26\x28-\x7e]|\\{E})"'" {return T_singlechar;}
 \"([\x20-\x21\x23-\x7e]|\\\")*\" {return T_string;}
-\%.*\n { /* One line comments */ }
-
+\\\%.*\x0a { /* One line comments */ }
+{W}+    { /* nothing */ }
 \<\* { BEGIN(COMMENT); }
 <COMMENT>\<\* {++comment_counter;}
 <COMMENT>\*\> {if (comment_counter > 0) --comment_counter;
                 else BEGIN(INITIAL);}
-
-<COMMENT>"*"+           {/*eat stars*/}
-<COMMENT>[^>*\n]+       {/*yum*/}
-<COMMENT>[<]            {/*do nothing*/}
-<COMMENT>\n             {/* do nothing TODO: linecount*/}
-
-
-{W}+    { /* nothing */ }
+<COMMENT>\n             {printf("i ate the line");/* change line | do nothing */}
+<COMMENT>{P}            {/* do nothing */}
 . {printf("error!\n"); exit (1);}
 
 
