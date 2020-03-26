@@ -1,4 +1,5 @@
 %option noyywrap
+%option yylineno
 %x COMMENT
 
 %{
@@ -97,7 +98,7 @@ P [\x20-\x7e]
 
 {W}+    { /* nothing */ }
 
-. {printf("error!\n"); exit (1);}
+. {printf("Error at line %d!\n", yylineno); exit (1);}
 
 
 
