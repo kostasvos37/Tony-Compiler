@@ -86,14 +86,19 @@ P [\x20-\x7e]
 "'"([\x20-\x26\x28-\x7e]|\\{E})"'" {return T_singlechar;}
 \"([\x20-\x21\x23-\x7e]|\\\")*\" {return T_string;}
 \\\%.*\x0a { /* One line comments */ }
-{W}+    { /* nothing */ }
+
 \<\* { BEGIN(COMMENT); }
 <COMMENT>\<\* {++comment_counter;}
 <COMMENT>\*\> {if (comment_counter > 0) --comment_counter;
                 else BEGIN(INITIAL);}
-<COMMENT>\n             {printf("i ate the line");/* change line | do nothing */}
-<COMMENT>{P}            {/* do nothing */}
+
+<COMMENT>[^\n]          {/* do nothing */}
+<COMMENT>\n             {/* change line | do nothing */}
+
+{W}+    { /* nothing */ }
+
 . {printf("error!\n"); exit (1);}
+
 
 
 %%
