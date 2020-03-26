@@ -90,9 +90,8 @@ P [\x20-\x7e]
 \<\* { BEGIN(COMMENT); }
 <COMMENT>\<\* {++comment_counter;}
 <COMMENT>\*\> {if (comment_counter > 0) --comment_counter;
-                else //printf("I just read a multiline\n");
-                     BEGIN(INITIAL);}
-<COMMENT>\n             {/* do nothing */}
+                else BEGIN(INITIAL);}
+<COMMENT>\n             {printf("i ate the line");/* change line | do nothing */}
 <COMMENT>{P}            {/* do nothing */}
 . {printf("error!\n"); exit (1);}
 
