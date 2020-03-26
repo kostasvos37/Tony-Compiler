@@ -46,6 +46,7 @@ W [ \r\t\n]
 E [ntr0'"\\]|[x][0-9A-F][0-9A-F]
 O [\+\-\*\/\#\=\<\>]|"<>"|"<="|">="
 S [\(\)\[\]\,\;\:]|":="
+P [\x20-\x7e]
 
 %%
     int comment_counter = 0;
@@ -79,20 +80,20 @@ S [\(\)\[\]\,\;\:]|":="
 
 
 {D}* {return T_const;}
-{O} {return T_operator;}
-{S} {return T_seperator;}
+{O}  {return T_operator;}
+{S}  {return T_seperator;}
 {L}+({L}|{D}|"_"|"?")* {return T_id;} 
 "'"([\x20-\x26\x28-\x7e]|\\{E})"'" {return T_singlechar;}
 \"([\x20-\x21\x23-\x7e]|\\\")*\" {return T_string;}
-\%.*\n { /* One line comments */ }
+\\\%.*\x0a { /* One line comments */ }
+{W}+    { /* nothing */ }
 \<\* { BEGIN(COMMENT); }
 <COMMENT>\<\* {++comment_counter;}
 <COMMENT>\*\> {if (comment_counter > 0) --comment_counter;
-                else BEGIN(INITIAL);}
+                else //printf("I just read a multiline\n");
+                     BEGIN(INITIAL);}
 <COMMENT>\n             {/* do nothing */}
-<COMMENT>{L}*           {/* do nothing */}
-<COMMENT>"*"            {/* do nothing */}
-{W}+    { /* nothing */ }
+<COMMENT>{P}            {/* do nothing */}
 . {printf("error!\n"); exit (1);}
 
 
