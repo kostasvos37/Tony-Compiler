@@ -81,17 +81,22 @@ S [\(\)\[\]\,\;\:]|":="
 {D}* {return T_const;}
 {O} {return T_operator;}
 {S} {return T_seperator;}
-{L}+({L}|{D}|"_"|"?")* {return T_id;} 
-"'"([\x20-\x26\x28-\x7e]|\\{E})"'" {return T_singlechar;}
+{L}+({L}|{D}|\_|\?)* {return T_id;} 
+\'([\x20-\x26\x28-\x7e]|\\{E})\' {return T_singlechar;}
 \"([\x20-\x21\x23-\x7e]|\\\")*\" {return T_string;}
 \%.*\n { /* One line comments */ }
+
 \<\* { BEGIN(COMMENT); }
 <COMMENT>\<\* {++comment_counter;}
 <COMMENT>\*\> {if (comment_counter > 0) --comment_counter;
                 else BEGIN(INITIAL);}
-<COMMENT>\n             {/* do nothing */}
-<COMMENT>{L}*           {/* do nothing */}
-<COMMENT>"*"            {/* do nothing */}
+
+<COMMENT>"*"+           {/*eat stars*/}
+<COMMENT>[^>*\n]+       {/*yum*/}
+<COMMENT>[<]            {/*do nothing*/}
+<COMMENT>\n             {/* do nothing TODO: linecount*/}
+
+
 {W}+    { /* nothing */ }
 . {printf("error!\n"); exit (1);}
 
