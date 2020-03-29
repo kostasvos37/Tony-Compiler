@@ -3,6 +3,13 @@
 %x COMMENT
 
 %{
+#include <cstdio>
+#include <cstdlib>
+#include "lexer.hpp"
+//#include "parser.hpp"
+%}
+
+%{
 #define T_eof 0
 #define T_id 1001 
 #define T_and 1002
@@ -98,11 +105,16 @@ P [\x20-\x7e]
 
 {W}+    { /* nothing */ }
 
-. {printf("Error at line %d!\n", yylineno); exit (1);}
+. {yyerror("Error at line ", yylineno); exit (1);}
 
 
 
 %%
+
+void yyerror(const char *msg, const int line) {
+  fprintf(stderr, "%s%d\n", msg, line);
+  exit(1);
+}
 
 int main ()
 {
