@@ -63,3 +63,44 @@ std::map<char, int> globals;
 
 %left<op> UMINUS UPLUS
 
+%%
+
+Program :
+    Func-def;
+
+Func-def :
+    "def" Header ":" A  B "end"
+
+A:
+    A Func-def
+|   A Func-decl
+|   A Var-def
+|   /*ε*/;
+
+B:
+    Stmt
+|   B Stmt;
+
+Header:
+    Type id '(' Par ')'
+|   id '('')'
+|   id '(' Par ')';
+
+Par:
+    Type Var-Comma
+|   "ref" Type Var-Comma
+|   Par ';' Par;
+
+Var-Comma :
+    id 
+|   Var-Comma , id;
+
+Type:
+    "int" | "char" | "bool" | Type '['']' | "list" '['Type']';
+
+
+%%
+
+int main(){
+  return 0;
+}
