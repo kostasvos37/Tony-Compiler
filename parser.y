@@ -69,7 +69,7 @@ Program:
     Funcdef;
 
 Func_def:
-    "def" Header ":" Func_def_dec  Func_def_body "end";
+    "def" Header ":" Func_def_dec  Stmt_body "end";
 
 Func_def_dec:
     Func_def_dec Func_def
@@ -77,9 +77,9 @@ Func_def_dec:
 |   Func_def_dec Var_def
 |   /*ε*/;
 
-Func_def_body:
+Stmt_body:
     Stmt
-|   Func_def_body Stmt;
+|   Stmt_body Stmt;
 
 Header:
     Type id '('')'
@@ -114,8 +114,9 @@ Stmt:
     Simple
 |   "exit"
 |   "return" Expr
-|   /* If δεν το χω κανει ακόμα */
-|   "for" Simple_List ";" Expr ";" Simple_List ":" Stmt "end" {/*not sure*/};
+|   "if" Expr ":" Stmt_body Stmt_Else_body "end"
+|   "if" Expr ":" Stmt_body Stmt_Else_body "else" ":" Stmt_body "end"
+|   "for" Simple_List ";" Expr ";" Simple_List ":" Stmt_body "end";
 
 Simple:
     "skip"
