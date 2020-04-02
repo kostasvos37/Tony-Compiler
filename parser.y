@@ -16,7 +16,7 @@ std::map<char, int> globals;
   string str; 
 }
 
-%token<name> T_id 
+%token<name> T_id "id"
 %token<op> T_and "and"
 %token T_bool "bool"
 %token T_char "char"
@@ -43,11 +43,11 @@ std::map<char, int> globals;
 %token T_skip "skip"
 %token T_tail "tail"
 %token<b> T_true "true"
-%token<num> T_const 
-%token<c> T_singlechar
-%token<str> T_string
-%token<op> T_operator
-%token<sep> T_seperator
+%token<num> T_const "int_const"
+%token<c> T_singlechar  "char_const"
+%token<str> T_string    "string_literal"
+%token<op> T_operator   "operator"
+%token<sep> T_seperator "seperator"
 
 
 %left<op> 'or' 
@@ -65,38 +65,112 @@ std::map<char, int> globals;
 
 %%
 
-Program :
-    Func-def;
+Program:
+    Funcdef;
 
-Func-def :
-    "def" Header ":" A  B "end"
+Func_def:
+    "def" Header ":" Func_def_dec  Func_def_body "end";
 
-A:
-    A Func-def
-|   A Func-decl
-|   A Var-def
+Func_def_dec:
+    Func_def_dec Func_def
+|   Func_def_dec Func_decl
+|   Func_def_dec Var_def
 |   /*ε*/;
 
-B:
+Func_def_body:
     Stmt
-|   B Stmt;
+|   Func_def_body Stmt;
 
 Header:
-    Type id '(' Par ')'
+    Type id '('')'
+|   Type id '(' Formal Par ')'
 |   id '('')'
-|   id '(' Par ')';
+|   id '(' Formal Par ')';
+
 
 Par:
-    Type Var-Comma
-|   "ref" Type Var-Comma
-|   Par ';' Par;
+|   Par ';' Formal;
+|   /*e*/;
 
-Var-Comma :
-    id 
-|   Var-Comma , id;
+Formal:
+    "ref" Type id Var_Comma
+|   Type id Var_Comma;
+
+Var_Comma:
+    /* e*/
+|   Var_Comma , id;
 
 Type:
     "int" | "char" | "bool" | Type '['']' | "list" '['Type']';
+
+Func_Decl:
+    "decl" Header;
+
+Var_Def:
+    Type id
+|   Type id Var_Comma;
+
+Stmt:
+    Simple
+|   "exit"
+|   "return" Expr
+|   /* If δεν το χω κανει ακόμα */
+|   "for" Simple_List ";" Expr ";" Simple_List ":" Stmt "end" {/*not sure*/};
+
+Simple:
+    "skip"
+|   Atom ":=" Expr
+|   Call;
+
+Simple_List:
+    Simple
+|   Simple  Simple_Comma;
+
+Simple_Comma:
+    /*ε*/
+|   Simple_Comma "," Simple;
+
+Call:
+    id  "("")"
+|   id  "(" Expr Expr-Comma ")";
+
+Expr-Comma:
+    /*ε*/
+|   Expr_Comma "," Expr;
+
+
+Atom:
+    id  |   string_literal  |   Atom "[" Expr "]" | Call;
+
+
+Expr:
+    Atom
+|   int_const
+|   string_literal
+|   char_const
+|   "(" Expr ")"
+|   Expr "+" Expr
+|   Expr "-" Expr
+|   Expr "*" Expr 
+|   Expr "/" Expr
+|   Expr "mod" Expr
+|   Expr "=" Expr
+|   Expr "<>" Expr
+|   Expr "<" Expr 
+|   Expr ">" Expr
+|   Expr "<=" Expr
+|   Expr ">=" Expr
+|   "true"
+|   "false"
+|   "not" Expr
+|   Expr "and" Expr
+|   Expr "or" Expr
+|   "new" Type "[" Expr "]"
+|   "nil"
+|   "nil?" "(" Expr ")"
+|   Expr "#" Expr
+|   "head" "(" Expr ")"
+|   "tail" "(" Expr ")";
 
 
 %%
