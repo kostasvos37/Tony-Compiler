@@ -68,15 +68,15 @@ private:
 
 class Boolean: public Expr {
 public:
-  Boolean(bool boo): boo(b) {}
+  Boolean(bool b): boo(b) {} //wink wink pap
   virtual void printOn(std::ostream &out) const override {
-    out << "Bool: " << b << ")";
+    out << "Bool: " << boo << ")";
   }
   virtual void compile() const override {
-    printf("bool == %d\n", b);
+    printf("bool == %d\n", boo);
   }
 private:
-  bool b;
+  bool boo;
 };
 
 //MEXRI EDW!
