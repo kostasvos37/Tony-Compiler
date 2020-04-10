@@ -3,6 +3,7 @@
 #include <iostream>
 #include <map>
 #include <vector>
+#include <string>
 
 class AST {
 public:
@@ -83,7 +84,7 @@ private:
 
 class BinOp: public Expr {
 public:
-  BinOp(Expr *l, char o, Expr *r): left(l), op(o), right(r) {}
+  BinOp(Expr *l, char *o, Expr *r): left(l), op(std::string(o)), right(r) {}
   ~BinOp() { delete left; delete right; }
   virtual void printOn(std::ostream &out) const override {
     out << op << "(" << *left << ", " << *right << ")";
@@ -91,38 +92,89 @@ public:
   virtual void compile() const override {
     left->compile();
     right->compile();
-    printf("  popl %%ebx\n");
-    printf("  popl %%eax\n");
-    switch (op) {
-      case '+':
-        printf("  addl %%ebx, %%eax\n");
-        printf("  pushl %%eax\n");
-        break;
-      case '-':
-        printf("  subl %%ebx, %%eax\n");
-        printf("  pushl %%eax\n");
-        break;
-      case '*':
-        printf("  mull %%ebx\n");
-        printf("  pushl %%eax\n");
-        break;
-      case '/':
-        printf("  cdq\n");
-        printf("  divl %%ebx\n");
-        printf("  pushl %%eax\n");
-        break;
-      case '%':
-        printf("  cdq\n");
-        printf("  divl %%ebx\n");
-        printf("  pushl %%edx\n");
-        break;
+    if(op == "+")
+      printf("operator +\n");
+    else if(op == "-")
+      printf("operator -\n");
+    else if(op == "*")
+      printf("operator *\n");
+    else if(op == "/")
+      printf("operator /\n");
+    else if(op == "mod")
+      printf("operator mod\n");
+    else if(op == "=")
+      printf("operator =\n");
+    else if(op == ">")
+      printf("operator >\n");
+    else if(op == "<")
+      printf("operator <\n");
+    else if(op == ">=")
+      printf("operator >=\n");
+    else if(op == "<=")
+      printf("operator <=\n");
+    else if(op == "<>")
+      printf("operator <>\n");
+    else if(op == "and")
+      printf("operator and\n");
+    else if(op == "or")
+      printf("operator or\n");
+    else if(op == "#")
+      printf("operator #\n");
+    else 
+      printf("Wrong operator dummy! Huehuehuehue\n");
     }
-  }
 private:
   Expr *left;
-  char op;
+  std::string op;
   Expr *right;
 };
+
+class UnOp: public Expr {
+public:
+  UnOp(char *o, Expr *r): op(std::string(o)), right(r) {}
+  ~UnOp() { delete right; }
+  virtual void printOn(std::ostream &out) const override {
+    out << op << " " << *right;
+  }
+  virtual void compile() const override {
+    right->compile();
+    if(op == "+")
+      printf("operator +\n");
+    else if(op == "-")
+      printf("operator -\n");
+    else if(op == "nil?")
+      printf("operator nil?\n");
+    else if(op == "not")
+      printf("operator not\n");
+    else if(op == "head")
+      printf("operator head\n");
+    else if(op == "tail")
+      printf("operator tail\n");
+    else 
+      printf("Wrong unary operator dummy! Huehuehuehue\n");
+    }
+private:
+  std::string op;
+  Expr *right;
+};
+
+class New: public Expr {
+public:
+  New(std::string t, Expr *right): typ(t), expr(right){}
+  ~New() {delete expr;}
+  virtual void printOn(std::ostream &out) const override {
+    out << typ;
+  }
+  virtual void compile() const override {
+    expr->compile();
+    printf("New %s\n", typ);
+  }
+private:
+  std::string typ;
+  Expr *expr;
+};
+
+
 
 class Let: public Stmt {
 public:

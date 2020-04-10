@@ -10,10 +10,10 @@ std::map<char, int> globals;
   int num;
   char c;
   bool b;
-  char op[3];
+  char op[4];
   char sep[2];
-  string name;
-  string str; 
+  char name[80]; //!!
+  char str[80]; //!!
 }
 
 %token<name> T_id "id"
@@ -137,7 +137,8 @@ Call:
 
 Expr-Comma:
     /*ε*/
-|   Expr_Comma "," Expr;
+|   Expr_Commaprintf("  subl %%ebx, %%eax\n");
+        printf("  pushl %%eax\n"); "," Expr;
 
 
 Atom:
@@ -161,6 +162,8 @@ Expr:
 |   Expr ">" Expr
 |   Expr "<=" Expr
 |   Expr ">=" Expr
+|   "-" Expr %prec UMINUS
+|   "+" Expr %prec UPLUS
 |   "true"
 |   "false"
 |   "not" Expr
