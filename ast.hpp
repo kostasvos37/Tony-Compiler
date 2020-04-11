@@ -221,6 +221,33 @@ private:
   Expr *expr;
 };
 
+class FunctionCall: public Expr {
+public:
+  FunctionCall(char *n): name(std::string(n)), parameters() {}
+  ~FunctionCall() { for (Expr *e : parameters) delete e; }
+  void append(Expr *e) { parameters.push_back(e); }
+  virtual void printOn(std::ostream &out) const override {
+    out << "FunctionCall(";
+    bool first = true;
+    for (Expr *e : parameters) {
+      if (!first) out << ", ";
+      first = false;
+      out << *e;
+    }
+    out << ")";
+  }
+  virtual void compile() const override {
+    printf("Function call and these are my bitches: \n");
+    for (Expr *s : parameters)
+      e->compile();
+    
+  }
+private:
+  std::string name;
+  std::vector<Expr*> parameters;
+} 
+
+//MEXRI EDW
 
 class Print: public Stmt {
 public:
