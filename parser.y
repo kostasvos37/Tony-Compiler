@@ -132,12 +132,12 @@ Simple_Comma:
 |   Simple_Comma "," Simple;
 
 Call:
-    id  "("")"
-|   id  "(" Expr Expr-Comma ")";
+    id  "("")" { $$ = new FunctionCall($1); } //YOU WERE RIGHT HERE
+|   id  "(" Expr Expr-Comma ")"; { $$ = new FunctionCall($1); $$->append($1); }
 
 Expr-Comma:
     /*ε*/
-|   Expr_Comma "," Expr;
+|   Expr_Comma "," Expr; {  }
 
 
 Atom:
