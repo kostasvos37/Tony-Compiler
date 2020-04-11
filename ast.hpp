@@ -4,6 +4,7 @@
 #include <map>
 #include <vector>
 #include <string>
+#include "symbol.hpp"
 
 class AST {
 public:
@@ -11,6 +12,7 @@ public:
   virtual void printOn(std::ostream &out) const = 0;
 };
 
+//not sure what this does
 inline std::ostream& operator<< (std::ostream &out, const AST &t) {
   t.printOn(out);
   return out;
@@ -27,6 +29,35 @@ public:
 };
 
 extern std::map<char, int> globals;
+
+class Id: public Expr {
+public:
+  Id(char *v): var(std::string(v)) {}
+  virtual void printOn(std::ostream &out) const override {
+    out << "Id(" << var << ")";
+  }
+  virtual void compile() const override {
+    printf("i smell a variable\n");    
+    //return globals[var];
+  }
+private:
+  std::string var;
+};
+
+class Array: public Expr {
+public:
+  Array(char *t): typ(std::string(t)) {}
+  virtual void printOn(std::ostream &out) const override {
+    out << "Array " << typ << " " << *expr << "\n";
+  }
+  virtual void compile() const override {
+    expr->compile();
+    printf("i am arraying huehue\n");
+  }
+private:
+  std::string typ;
+  Expr *expr;
+}
 
 class IntConst: public Expr {
 public:
@@ -80,7 +111,6 @@ private:
   bool boo;
 };
 
-//MEXRI EDW!
 
 class BinOp: public Expr {
 public:
@@ -183,15 +213,14 @@ public:
   virtual void printOn(std::ostream &out) const override {
     out << "Let(" << var << " = " << *expr << ")";
   }
-  virtual void compile() const override {
-    expr->compile();
-    printf("  popl %%eax\n");
-    printf("  movl %%eax, %d(%%edi)\n", 4 * (var - 'a'));
+  virtual void run() const override {
+    globals[var] = expr->compile(); //will need fixing
   }
 private:
   char var;
   Expr *expr;
 };
+
 
 class Print: public Stmt {
 public:

@@ -137,44 +137,46 @@ Call:
 
 Expr-Comma:
     /*ε*/
-|   Expr_Commaprintf("  subl %%ebx, %%eax\n");
-        printf("  pushl %%eax\n"); "," Expr;
+|   Expr_Comma "," Expr;
 
 
 Atom:
-    id  |   string_literal  |   Atom "[" Expr "]" | Call;
+    id  { $$ = new Id($1); }
+|   string_literal  { $$ = new StringLiteral($1); }
+|   Atom "[" Expr "]"  { $$ = new Array($1, $3); }
+|   Call;
 
 
 Expr:
     Atom
-|   int_const
-|   string_literal
-|   char_const
-|   "(" Expr ")"
-|   Expr "+" Expr
-|   Expr "-" Expr
-|   Expr "*" Expr 
-|   Expr "/" Expr
-|   Expr "mod" Expr
-|   Expr "=" Expr
-|   Expr "<>" Expr
-|   Expr "<" Expr 
-|   Expr ">" Expr
-|   Expr "<=" Expr
-|   Expr ">=" Expr
-|   "-" Expr %prec UMINUS
-|   "+" Expr %prec UPLUS
-|   "true"
-|   "false"
-|   "not" Expr
-|   Expr "and" Expr
-|   Expr "or" Expr
-|   "new" Type "[" Expr "]"
-|   "nil"
-|   "nil?" "(" Expr ")"
-|   Expr "#" Expr
-|   "head" "(" Expr ")"
-|   "tail" "(" Expr ")";
+|   int_const { $$ = new IntConst($1); }
+|   string_literal { $$ = new StringLiteral($1); }
+|   char_const { $$ = new CharConst($1); }
+|   "(" Expr ")" { $$ = $2; }
+|   Expr "+" Expr { $$ = new BinOp($1, $2, $3); }
+|   Expr "-" Expr { $$ = new BinOp($1, $2, $3); }
+|   Expr "*" Expr { $$ = new BinOp($1, $2, $3); }
+|   Expr "/" Expr { $$ = new BinOp($1, $2, $3); }
+|   Expr "mod" Expr { $$ = new BinOp($1, $2, $3); }
+|   Expr "=" Expr { $$ = new BinOp($1, $2, $3); }
+|   Expr "<>" Expr { $$ = new BinOp($1, $2, $3); }
+|   Expr "<" Expr { $$ = new BinOp($1, $2, $3); }
+|   Expr ">" Expr { $$ = new BinOp($1, $2, $3); }
+|   Expr "<=" Expr { $$ = new BinOp($1, $2, $3); }
+|   Expr ">=" Expr { $$ = new BinOp($1, $2, $3); }
+|   "-" Expr %prec UMINUS { $$ = new UnOp($1, $2); }
+|   "+" Expr %prec UPLUS { $$ = new UnOp($1, $2); }
+|   "true" { $$ = new Boolean($1); }
+|   "false" { $$ = new Boolean($1); }
+|   "not" Expr { $$ = new UnOp($1, $2); }
+|   Expr "and" Expr { $$ = new BinOp($1, $2, $3); }
+|   Expr "or" Expr { $$ = new BinOp($1, $2, $3); }
+|   "new" Type "[" Expr "]" { $$ = new New($2, $4); }
+|   "nil" 
+|   "nil?" "(" Expr ")" { $$ = new UnOp($1, $3); }
+|   Expr "#" Expr { $$ = new BinOp($1, $2, $3); }
+|   "head" "(" Expr ")" { $$ = new UnOp($1, $3); }
+|   "tail" "(" Expr ")" { $$ = new UnOp($1, $3); };
 
 
 %%
