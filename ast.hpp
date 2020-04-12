@@ -4,7 +4,6 @@
 #include <map>
 #include <vector>
 #include <string>
-#include "symbol.hpp"
 
 class AST {
 public:
@@ -57,7 +56,7 @@ public:
 private:
   std::string typ;
   Expr *expr;
-}
+};
 
 class IntConst: public Expr {
 public:
@@ -213,8 +212,8 @@ public:
   virtual void printOn(std::ostream &out) const override {
     out << "Let(" << var << " = " << *expr << ")";
   }
-  virtual void run() const override {
-    globals[var] = expr->compile(); //will need fixing
+  virtual void compile() const override {
+    //globals[var] = expr->compile(); will need fixing
   }
 private:
   char var;
@@ -223,9 +222,11 @@ private:
 
 class FunctionCall: public Expr {
 public:
+  FunctionCall(): parameters() {}
   FunctionCall(char *n): name(std::string(n)), parameters() {}
   ~FunctionCall() { for (Expr *e : parameters) delete e; }
   void append(Expr *e) { parameters.push_back(e); }
+  void setName(char *n) { name = std::string(name);}
   virtual void printOn(std::ostream &out) const override {
     out << "FunctionCall(";
     bool first = true;
@@ -238,14 +239,13 @@ public:
   }
   virtual void compile() const override {
     printf("Function call and these are my bitches: \n");
-    for (Expr *s : parameters)
+    for (Expr *e : parameters)
       e->compile();
-    
   }
 private:
   std::string name;
   std::vector<Expr*> parameters;
-} 
+};
 
 //MEXRI EDW
 
