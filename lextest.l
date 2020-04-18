@@ -5,7 +5,7 @@
 %{
 #include <cstdio>
 #include <cstdlib>
-#include "lexer.hpp"
+//#include "lexer.hpp"
 //#include "parser.hpp"
 %}
 
@@ -87,26 +87,18 @@ P [\x20-\x7e]
 "true" {return T_true;}
 
 
-{D}* {yylval.num = atoi(yytext); return T_const;}
+{D}* {return T_const;}
 
 {O}  {return T_operator;}
 
 {S}  {return T_seperator;}
 
 {L}+({L}|{D}|"_"|"?")* {
-    int i;
-    for(i=0; yylex[i]!='\0';i++)
-        yylval.name[i] = yylex[i];
-    
-    yyval.name[i] = '\0';
     return T_id;} 
 
-"'"([\x20-\x26\x28-\x7e]|\\{E})"'" {yyval.c=yylex[1]; return T_singlechar;}
+"'"([\x20-\x26\x28-\x7e]|\\{E})"'" {return T_singlechar;}
 
-\"([\x20-\x21\x23-\x7e]|\\\")*\" {
-    int i;
-    for(i=1;yylex[i] != '"';i++) yyval.str[i-1] = yylex[i];
-    yyval.str[i-1] = '\0';    
+\"([\x20-\x21\x23-\x7e]|\\\")*\" {   
     return T_string;}
 
 \\\%.*\x0a { /* One line comments */ }

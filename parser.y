@@ -63,6 +63,8 @@ std::map<char, int> globals;
 
 %left<op> UMINUS UPLUS
 
+// TYPES EDW, ta types einai mh termatika kai ti shmasiologiki timh epistrefoun den ta xoyme valei prepei na ta valoume de douleuei alliws aaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+
 %%
 
 Program:
@@ -132,7 +134,7 @@ Simple_Comma:
 |   Simple_Comma "," Simple;
 
 Call:
-    id  "("")" { $$ = new FunctionCall($1);} //YOU WERE RIGHT HERE
+    id  "("")" { $$ = new FunctionCall($1);}
 |   id  "(" Expr Expr-Comma ")"; { $4->append($3); $4->setName($1); $$ = $4 }
 
 Expr-Comma:
@@ -144,7 +146,7 @@ Atom:
     id  { $$ = new Id($1); }
 |   string_literal  { $$ = new StringLiteral($1); }
 |   Atom "[" Expr "]"  { $$ = new Array($1, $3); }
-|   Call;
+|   Call {$$ = $1};
 
 
 Expr:
