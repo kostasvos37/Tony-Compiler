@@ -59,7 +59,7 @@ P [\x20-\x7e]
 %%
     int comment_counter = 0;
 
-"and" {return T_and;}
+"and" {yyval.op[0]='a'; yyval.op[1]='n'; yyval.op[2]='d'; yyval.op[3]='\0';  return T_and;}
 "bool" {return T_bool;}
 "char" {return T_char;}
 "decl" {return T_decl;}
@@ -68,30 +68,44 @@ P [\x20-\x7e]
 "elseif" {return T_elseif;}
 "end" {return T_end;}
 "exit" {return T_exit;}
-"false" {return T_false;}
+"false" {yyval.b= false; return T_false;}
 "for" {return T_for;}
 "head" {return T_head;}
 "if" {return T_if;}
 "int" {return T_int;}
 "list" {return T_list;}
-"mod" {return T_mod;}
+"mod" {yyval.op[0]='m'; yyval.op[1]='o'; yyval.op[2]='d'; yyval.op[3]='\0'; return T_mod;}
 "new" {return T_new;}
 "nil" {return T_nil;}
 "nil?" {return T_nil2;}
-"not" {return T_not;}
-"or" {return T_or;}
+"not" {yyval.op[0]='n'; yyval.op[1]='o'; yyval.op[2]='t'; yyval.op[3]='\0';return T_not;}
+"or" {yyval.op[0]='o'; yyval.op[1]='r'; yyval.op[2]='\0'; return T_or;}
 "ref" {return T_ref;}
 "return" {return T_return;}
 "skip" {return T_skip;}
 "tail" {return T_tail;}
-"true" {return T_true;}
+"true" {yyval.b= true; return T_true;}
 
 
 {D}* {yylval.num = atoi(yytext); return T_const;}
 
-{O}  {return T_operator;}
+{O}  {
+    int i;
+    for(i=0; yylex[i]!='\0';i++)
+        yylval.op[i] = yylex[i];
+    
+    yyval.op[i] = '\0';
+    
+    return T_operator;}
 
-{S}  {return T_seperator;}
+{S}  {
+    int i;
+    for(i=0; yylex[i]!='\0';i++)
+        yylval.sep[i] = yylex[i];
+    
+    yyval.sep[i] = '\0';
+    
+    return T_seperator;}
 
 {L}+({L}|{D}|"_"|"?")* {
     int i;
