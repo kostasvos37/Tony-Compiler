@@ -37,7 +37,6 @@ public:
   }
   virtual void compile() const override {
     printf("i smell a variable\n");    
-    //return globals[var];
   }
 private:
   std::string var;
@@ -204,22 +203,6 @@ private:
 };
 
 
-
-class Let: public Stmt {
-public:
-  Let(char v, Expr *e): var(v), expr(e) {}
-  ~Let() { delete expr; }
-  virtual void printOn(std::ostream &out) const override {
-    out << "Let(" << var << " = " << *expr << ")";
-  }
-  virtual void compile() const override {
-    //globals[var] = expr->compile(); will need fixing
-  }
-private:
-  char var;
-  Expr *expr;
-};
-
 class FunctionCall: public Expr {
 public:
   FunctionCall(): parameters() {}
@@ -248,6 +231,69 @@ private:
 };
 
 //MEXRI EDW
+
+class Skip: public Stmt{
+public:
+  Skip() {}
+  virtual void printOn(std::ostream &out) const override {
+    out << "skip\n";
+  }
+  virtual void compile() const override {
+    printf("i just skipped\n");
+  }
+};
+
+class Let: public Stmt {
+public:
+  Let(Expr *a, Expr *e): atom(a), expr(e) {}
+  ~Let() { 
+    delete atom;
+    delete expr; }
+  virtual void printOn(std::ostream &out) const override {
+    out << "Let(" << "kkdjgrrjgsrgjsnrgj" << " = " << *expr << ")";
+  }
+  virtual void compile() const override {
+    atom->compile();
+    expr->compile();
+    printf("Let\n");
+  }
+private:
+  Expr *atom;
+  Expr *expr;
+};
+
+class SimpleList: public Stmt {
+public:
+  SimpleList(): simples() {}
+  SimpleList(Stmt *kyrios_stamou) {
+    std::vector<Stmt*> temp;
+    simples = temp;
+    simples.push_back(kyrios_stamou); // MEEEEEEEEEEEEEEEEEEEEEXRIS EDWPALIANES 
+  }  
+  ~SimpleList() { for (Stmt *e : simples) delete e; }
+  void append(Stmt *e) { simples.push_back(e); }
+  virtual void printOn(std::ostream &out) const override {
+    out << "SimpleList(";
+    bool first = true;
+    for (Stmt *e : simples) {
+      if (!first) out << ", ";
+      first = false;
+      out << *e;
+    }
+    out << ")";
+  }
+  virtual void compile() const override {
+    printf("SimpleList and these are my stitches: \n");
+    for (Stmt *e : simples)
+      e->compile();
+  }
+private:
+  std::vector<Stmt*> simples;
+}
+
+
+
+//PROSOXH TA FUNCTION CALLS MAY BE EXPRESSIONS H STATEMENTS
 
 class Print: public Stmt {
 public:

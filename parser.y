@@ -63,7 +63,7 @@ std::map<char, int> globals;
 
 %left<op> UMINUS UPLUS
 
-// TYPES EDW, ta types einai mh termatika kai ti shmasiologiki timh epistrefoun den ta xoyme valei prepei na ta valoume de douleuei alliws aaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+// TYPES EDW, ta types einai mh termatika kai ti shmasiologiki timh epistrefoun den ta xoyme valei prepei na ta valoume de douleuei alliws a
 
 %%
 
@@ -121,17 +121,17 @@ Stmt:
 |   "for" Simple_List ";" Expr ";" Simple_List ":" Stmt_body "end";
 
 Simple:
-    "skip"
-|   Atom ":=" Expr
-|   Call;
+    "skip"          {$$ = new Skip();}
+|   Atom ":=" Expr  {$$ = new Let($1,$3);}
+|   Call            {$$ = $1;};
 
 Simple_List:
-    Simple
-|   Simple  Simple_Comma;
+    Simple                  { $$ = new SimpleList($1); }
+|   Simple  Simple_Comma    { $1->append($3); $$ = $1; };
 
 Simple_Comma:
-    /*ε*/
-|   Simple_Comma "," Simple;
+    /*ε*/  { $$ = new SimpleList(); }
+|   Simple_Comma "," Simple { $1->append($3); $$ = $1; };
 
 Call:
     id  "("")" { $$ = new FunctionCall($1);}
