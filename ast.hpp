@@ -9,6 +9,7 @@ class AST {
 public:
   virtual ~AST() {}
   virtual void printOn(std::ostream &out) const = 0;
+  virtual void compile() const = 0;
 };
 
 //not sure what this does
@@ -19,12 +20,12 @@ inline std::ostream& operator<< (std::ostream &out, const AST &t) {
 
 class Expr: public AST {
 public:
-  virtual void compile() const = 0;
+  
 };
 
 class Stmt: public AST {
 public:
-  virtual void compile() const = 0;
+  
 };
 
 extern std::map<char, int> globals;
@@ -203,7 +204,7 @@ private:
 };
 
 
-class FunctionCall: public Expr {
+class FunctionCall: public AST {
 public:
   FunctionCall(): parameters() {}
   FunctionCall(char *n): name(std::string(n)), parameters() {}
@@ -230,7 +231,7 @@ private:
   std::vector<Expr*> parameters;
 };
 
-//MEXRI EDW
+
 
 class Skip: public Stmt{
 public:
@@ -266,16 +267,16 @@ class SimpleList: public Stmt {
 public:
   SimpleList(): simples() {}
   SimpleList(Stmt *kyrios_stamou) {
-    std::vector<Stmt*> temp;
+    std::vector<AST*> temp;
     simples = temp;
     simples.push_back(kyrios_stamou); // MEEEEEEEEEEEEEEEEEEEEEXRIS EDWPALIANES 
   }  
-  ~SimpleList() { for (Stmt *e : simples) delete e; }
+  ~SimpleList() { for (AST *e : simples) delete e; }
   void append(Stmt *e) { simples.push_back(e); }
   virtual void printOn(std::ostream &out) const override {
     out << "SimpleList(";
     bool first = true;
-    for (Stmt *e : simples) {
+    for (AST *e : simples) {
       if (!first) out << ", ";
       first = false;
       out << *e;
@@ -284,12 +285,12 @@ public:
   }
   virtual void compile() const override {
     printf("SimpleList and these are my stitches: \n");
-    for (Stmt *e : simples)
+    for (AST *e : simples)
       e->compile();
   }
 private:
-  std::vector<Stmt*> simples;
-}
+  std::vector<AST*> simples;
+};
 
 
 
