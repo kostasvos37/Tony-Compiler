@@ -94,6 +94,9 @@ P [\x20-\x7e]
 {S}  {return T_seperator;}
 
 {L}+({L}|{D}|"_"|"?")* {
+    for(int i=0; yytext[i]!='\0';i++)
+        printf("%c",yytext[i]);
+    printf(" That was your word byeeeeee \n");
     return T_id;} 
 
 "'"([\x20-\x26\x28-\x7e]|\\{E})"'" {return T_singlechar;}
@@ -113,7 +116,7 @@ P [\x20-\x7e]
 
 {W}+    { /* nothing */ }
 
-. {yyerror("Error at line ", yylineno); exit (1);}
+. {fprintf(stderr,"Error at line "); exit (1);}
 
 
 

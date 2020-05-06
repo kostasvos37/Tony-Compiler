@@ -2,16 +2,19 @@
 #include <cstdio>
 #include <string.h>
 #include "lexer.hpp"
+#include "ast.hpp"
+#
 
 std::map<char, int> globals;
 %}
 
 %union {
+  AST *ast;
   int num;
   char c;
   bool b;
-  char op[4];
-  char sep[2];
+  char op[5];
+  char sep[3];
   char name[80]; //!!
   char str[80]; //!!
 }
@@ -50,44 +53,63 @@ std::map<char, int> globals;
 %token<sep> T_seperator "seperator"
 
 
-%left<op> 'or' 
-%left<op> 'and'
-%nonassoc<op> 'not'
+%left "or"
+%left "and"
+%nonassoc "not"
 
-%nonassoc<op> '=' '<>' '<=' '>=' '<' '>'
+%nonassoc "=" "<=" ">=" ">" "<"
 
-%right<op> '#'
+%right "#"
 
-%left<op> '+' '-'
-%left<op> '*' '/' 'mod'
+%left "+" "-"
+%left "*" "/" "mod"
 
-%left<op> UMINUS UPLUS
+%left UMINUS UPLUS
 
 // TYPES EDW, ta types einai mh termatika kai ti shmasiologiki timh epistrefoun den ta xoyme valei prepei na ta valoume de douleuei alliws a
+%type<ast> Program
+%type<ast> Func_def
+%type<ast> Func_def_dec
+%type<ast> Stmt_body
+%type<ast> Header
+%type<ast> Par
+%type<ast> Formal
+%type<ast> Var_Comma
+%type<ast> Type
+%type<ast> Func_Decl
+%type<ast> Var_Def
+%type<ast> Stmt
+%type<ast> Simple
+%type<ast> Simple_List
+%type<ast> Simple_Comma
+%type<ast> Call
+%type<ast> Expr_Comma
+%type<ast> Atom
+%type<ast> Expr
 
 %%
 
 Program:
-    Funcdef;
+    Func_def {printf("PRogram start \n")};
 
 Func_def:
-    "def" Header ":" Func_def_dec  Stmt_body "end";
+    "def" Header ":" Func_def_dec  Stmt_body "end" {printf("Function Definition\n")};
 
 Func_def_dec:
-    Func_def_dec Func_def
-|   Func_def_dec Func_decl
-|   Func_def_dec Var_def
-|   /*ε*/;
+    Func_def_dec Func_def {printf("New Function definition\n")}
+|   Func_def_dec Func_decl {printf("New FUnction Declaration\n")}
+|   Func_def_dec Var_def {printf("New Var Definition\n")}
+|   /*ε*/ {printf("End of function definition\n")};
 
 Stmt_body:
-    Stmt
-|   Stmt_body Stmt;
+    Stmt {printf("Sinle Statement\n")}
+|   Stmt_body Stmt {printf("Next Stmt\n")};
 
 Header:
-    Type id '('')'
-|   Type id '(' Formal Par ')'
-|   id '('')'
-|   id '(' Formal Par ')';
+    Type id '('')' {printf("Header Decl (Single)\n"); }
+|   Type id '(' Formal Par ')' {printf("Header Decl (Multiple)\n"); }
+|   id '('')' {printf("Header Decl (Single-notype)\n"); }
+|   id '(' Formal Par ')' {printf("Header Decl (Multiple-notype)\n"); };
 
 
 Par:
@@ -95,90 +117,95 @@ Par:
 |   /*e*/;
 
 Formal:
-    "ref" Type id Var_Comma
-|   Type id Var_Comma;
+    "ref" Type id Var_Comma {printf("REference\n"); }
+|   Type id Var_Comma {printf("NonReference\n"); };
 
 Var_Comma:
-    /* e*/
-|   Var_Comma , id;
+    /* e*/ {printf("VAriablesEnd\n"); }
+|   Var_Comma ',' id {printf("VariableNext\n"); };
 
 Type:
-    "int" | "char" | "bool" | Type '['']' | "list" '['Type']';
+    "int" {printf("TypeInt\n"); }
+| "char" {printf("TypeChar\n"); }
+| "bool" {printf("TypeBool\n"); }
+| Type '['']' {printf("TypeArray\n"); }
+| "list" '['Type']' {printf("TypeList\n"); };
 
 Func_Decl:
-    "decl" Header;
+    "decl" Header {printf("Function Declaration\n"); };
 
 Var_Def:
-    Type id
-|   Type id Var_Comma;
+    Type id {printf("Variable definition (Single)\n"); }
+|   Type id Var_Comma {printf("VAriable Definition (Multiple)\n");}; 
 
 Stmt:
-    Simple
-|   "exit"
-|   "return" Expr
-|   "if" Expr ":" Stmt_body Stmt_Else_body "end"
-|   "if" Expr ":" Stmt_body Stmt_Else_body "else" ":" Stmt_body "end"
-|   "for" Simple_List ";" Expr ";" Simple_List ":" Stmt_body "end";
+    Simple { $$ = $1; }
+|   "exit" {printf("Exit\n"); }
+|   "return" Expr {printf("REturn\n"); }
+|   "if" Expr ":" Stmt_body Stmt_Else_body "end" { printf("If Statement\n");}
+|   "if" Expr ":" Stmt_body Stmt_Else_body "else" ":" Stmt_body "end" {printf("If Else Statement\n");}
+|   "for" Simple_List ";" Expr ";" Simple_List ":" Stmt_body "end" {printf("For Statement\n"); };
 
 Simple:
-    "skip"          {$$ = new Skip();}
-|   Atom ":=" Expr  {$$ = new Let($1,$3);}
-|   Call            {$$ = $1;};
+    "skip"          {printf("Skip\n"); }
+|   Atom ":=" Expr  {printf("Let\n"); }
+|   Call            {printf("Function Call\n"); };
 
 Simple_List:
-    Simple                  { $$ = new SimpleList($1); }
-|   Simple  Simple_Comma    { $1->append($3); $$ = $1; };
+    Simple                  { printf("Simple Statement (Single)\n");  }
+|   Simple  Simple_Comma    { printf("Simple Statement (Multiple)\n");  };
 
 Simple_Comma:
-    /*ε*/  { $$ = new SimpleList(); }
-|   Simple_Comma "," Simple { $1->append($3); $$ = $1; };
+    /*ε*/  { printf("End Simple parameters\n"); }
+|   Simple_Comma "," Simple { printf("Simple parameter\n");  };
 
 Call:
-    id  "("")" { $$ = new FunctionCall($1);}
-|   id  "(" Expr Expr-Comma ")"; { $4->append($3); $4->setName($1); $$ = $4 }
+    id  "("")" { printf("Function Call (Empty)"); }
+|   id  "(" Expr Expr_Comma ")" { printf("Function Call (Non-Empty)\n");  };
 
-Expr-Comma:
-    /*ε*/ { $$ = new FunctionCall(); }
-|   Expr_Comma "," Expr; { $1->append($3); $$ = $1; }
+
+Expr_Comma:
+    /*ε*/ { printf("Parameter end\n");  }
+|   Expr_Comma "," Expr { printf("Parameter\n");  };
 
 
 Atom:
-    id  { $$ = new Id($1); }
-|   string_literal  { $$ = new StringLiteral($1); }
-|   Atom "[" Expr "]"  { $$ = new Array($1, $3); }
-|   Call {$$ = $1};
+    id  { printf("Id\n");  }
+|   string_literal  { printf("String Literal\n");  }
+|   Atom "[" Expr "]"  { printf("Array\n");  }
+|   Call {printf("Call\n"); };
 
 
 Expr:
-    Atom
-|   int_const { $$ = new IntConst($1); }
-|   string_literal { $$ = new StringLiteral($1); }
-|   char_const { $$ = new CharConst($1); }
-|   "(" Expr ")" { $$ = $2; }
-|   Expr "+" Expr { $$ = new BinOp($1, $2, $3); }
-|   Expr "-" Expr { $$ = new BinOp($1, $2, $3); }
-|   Expr "*" Expr { $$ = new BinOp($1, $2, $3); }
-|   Expr "/" Expr { $$ = new BinOp($1, $2, $3); }
-|   Expr "mod" Expr { $$ = new BinOp($1, $2, $3); }
-|   Expr "=" Expr { $$ = new BinOp($1, $2, $3); }
-|   Expr "<>" Expr { $$ = new BinOp($1, $2, $3); }
-|   Expr "<" Expr { $$ = new BinOp($1, $2, $3); }
-|   Expr ">" Expr { $$ = new BinOp($1, $2, $3); }
-|   Expr "<=" Expr { $$ = new BinOp($1, $2, $3); }
-|   Expr ">=" Expr { $$ = new BinOp($1, $2, $3); }
-|   "-" Expr %prec UMINUS { $$ = new UnOp($1, $2); }
-|   "+" Expr %prec UPLUS { $$ = new UnOp($1, $2); }
-|   "true" { $$ = new Boolean($1); }
-|   "false" { $$ = new Boolean($1); }
-|   "not" Expr { $$ = new UnOp($1, $2); }
-|   Expr "and" Expr { $$ = new BinOp($1, $2, $3); }
-|   Expr "or" Expr { $$ = new BinOp($1, $2, $3); }
-|   "new" Type "[" Expr "]" { $$ = new New($2, $4); }
-|   "nil" 
-|   "nil?" "(" Expr ")" { $$ = new UnOp($1, $3); }
-|   Expr "#" Expr { $$ = new BinOp($1, $2, $3); }
-|   "head" "(" Expr ")" { $$ = new UnOp($1, $3); }
-|   "tail" "(" Expr ")" { $$ = new UnOp($1, $3); };
+    Atom {$$=$1;}
+|   int_const { printf("IntConst\n"); }
+|   string_literal { printf("IntConst\n"); }
+|   char_const { printf("IntConst\n"); }
+|   "(" Expr ")" { printf("ParExpr\n"); }
+|   Expr "+" Expr { printf("Plus\n"); }
+|   Expr "-" Expr { printf("Minus\n"); }
+|   Expr "*" Expr { printf("Epi\n"); }
+|   Expr "/" Expr { printf("Dia\n"); }
+|   Expr "mod" Expr { printf("BinOpMod\n"); }
+|   Expr "=" Expr { printf("BinOpEq\n"); }
+|   Expr "<>" Expr { printf("BinOpNotEq\n"); }
+|   Expr "<" Expr { printf("BinOpLessThan\n"); }
+|   Expr ">" Expr { printf("BinOpGreaterThan\n"); }
+|   Expr "<=" Expr { printf("BinOpLessEqThan\n"); }
+|   Expr ">=" Expr { printf("BinOpGreaterEqThan\n"); }
+|   "-" Expr %prec UMINUS { printf("UnOp Uminus\n"); }
+|   "+" Expr %prec UPLUS { printf("UnOp Uplus\n"); }
+|   "true" { printf("True\n");  }
+|   "false" { printf("False\n"); }
+|   "not" Expr {printf("Not\n");  }
+|   Expr "and" Expr { printf("And\n");  }
+|   Expr "or" Expr { printf("Or\n");  }
+|   "new" Type "[" Expr "]" { printf("New\n"); }
+|   "nil" { printf("nil\n"); }
+|   "nil?" "(" Expr ")" { printf("nil\n");  }
+|   Expr "#" Expr { printf("BinOp\n"); }
+|   "head" "(" Expr ")" { printf("UnOp Head\n"); }
+|   "tail" "(" Expr ")" { printf("UnOp Tail\n"); };
 
 
 %%
