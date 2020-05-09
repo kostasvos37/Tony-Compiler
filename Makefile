@@ -15,8 +15,8 @@ parser.hpp parser.cpp: parser.y
 
 parser.o: parser.cpp lexer.hpp
 
-minibasic: lexer.o parser.o
-	$(CXX) $(CXXFLAGS) -o minibasic lexer.o parser.o
+tony: lexer.o parser.o
+	$(CXX) $(CXXFLAGS) -o tony lexer.o parser.o
 
 lextest: lexer.cpp
 	$(CXX) $(CXXFLAGS) -o tony lexer.cpp
@@ -26,4 +26,4 @@ clean:
 	$(RM) lexer.cpp parser.cpp parser.hpp parser.output *.o
 
 distclean: clean
-	$(RM) minibasic
+	$(RM) tony

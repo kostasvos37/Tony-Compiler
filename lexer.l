@@ -6,7 +6,8 @@
 #include <cstdio>
 #include <cstdlib>
 #include "lexer.hpp"
-//#include "parser.hpp"
+#include "parser.hpp"
+#include "ast.hpp"
 %}
 
 %{

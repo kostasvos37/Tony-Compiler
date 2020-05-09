@@ -1,11 +1,12 @@
 %{
+
 #include <cstdio>
 #include <string.h>
 #include "lexer.hpp"
 #include "ast.hpp"
-#
 
 std::map<char, int> globals;
+
 %}
 
 %union {
@@ -90,39 +91,39 @@ std::map<char, int> globals;
 %%
 
 Program:
-    Func_def {printf("PRogram start \n")};
+    Func_def {printf("PRogram start \n");};
 
 Func_def:
-    "def" Header ":" Func_def_dec  Stmt_body "end" {printf("Function Definition\n")};
+    "def" Header ":" Func_def_dec  Stmt_body "end" {printf("Function Definition\n");};
 
 Func_def_dec:
-    Func_def_dec Func_def {printf("New Function definition\n")}
-|   Func_def_dec Func_decl {printf("New FUnction Declaration\n")}
-|   Func_def_dec Var_def {printf("New Var Definition\n")}
-|   /*ε*/ {printf("End of function definition\n")};
+    Func_def_dec Func_def {printf("New Function definition\n");}
+|   Func_def_dec Func_Decl {printf("New FUnction Declaration\n");}
+|   Func_def_dec Var_Def {printf("New Var Definition\n");}
+|   /*ε*/ {printf("End of function definition\n");};
 
 Stmt_body:
-    Stmt {printf("Sinle Statement\n")}
-|   Stmt_body Stmt {printf("Next Stmt\n")};
+    Stmt {printf("Sinle Statement\n");}
+|   Stmt_body Stmt {printf("Next Stmt\n");};
 
 Header:
-    Type id '('')' {printf("Header Decl (Single)\n"); }
-|   Type id '(' Formal Par ')' {printf("Header Decl (Multiple)\n"); }
-|   id '('')' {printf("Header Decl (Single-notype)\n"); }
-|   id '(' Formal Par ')' {printf("Header Decl (Multiple-notype)\n"); };
+    Type "id" '('')' {printf("Header Decl (Single)\n");}
+|   Type "id" '(' Formal Par ')' {printf("Header Decl (Multiple)\n"); }
+|   "id" '('')' {printf("Header Decl (Single-notype)\n"); }
+|   "id" '(' Formal Par ')' {printf("Header Decl (Multiple-notype)\n"); };
 
 
 Par:
-|   Par ';' Formal;
-|   /*e*/;
+    Par ';' Formal {printf("no action\n");}
+|   /*e*/ {printf("no action\n");};
 
 Formal:
-    "ref" Type id Var_Comma {printf("REference\n"); }
-|   Type id Var_Comma {printf("NonReference\n"); };
+    "ref" Type "id" Var_Comma {printf("REference\n"); }
+|   Type "id" Var_Comma {printf("NonReference\n"); };
 
 Var_Comma:
     /* e*/ {printf("VAriablesEnd\n"); }
-|   Var_Comma ',' id {printf("VariableNext\n"); };
+|   Var_Comma ',' "id" {printf("VariableNext\n"); };
 
 Type:
     "int" {printf("TypeInt\n"); }
@@ -135,15 +136,15 @@ Func_Decl:
     "decl" Header {printf("Function Declaration\n"); };
 
 Var_Def:
-    Type id {printf("Variable definition (Single)\n"); }
-|   Type id Var_Comma {printf("VAriable Definition (Multiple)\n");}; 
+    Type "id" {printf("Variable definition (Single)\n"); }
+|   Type "id" Var_Comma {printf("VAriable Definition (Multiple)\n");}; 
 
 Stmt:
     Simple { $$ = $1; }
 |   "exit" {printf("Exit\n"); }
 |   "return" Expr {printf("REturn\n"); }
-|   "if" Expr ":" Stmt_body Stmt_Else_body "end" { printf("If Statement\n");}
-|   "if" Expr ":" Stmt_body Stmt_Else_body "else" ":" Stmt_body "end" {printf("If Else Statement\n");}
+|   "if" Expr ":" Stmt_body  "end" { printf("If Statement\n");}
+|   "if" Expr ":" Stmt_body  "else" ":" Stmt_body "end" {printf("If Else Statement\n");}
 |   "for" Simple_List ";" Expr ";" Simple_List ":" Stmt_body "end" {printf("For Statement\n"); };
 
 Simple:
@@ -160,8 +161,8 @@ Simple_Comma:
 |   Simple_Comma "," Simple { printf("Simple parameter\n");  };
 
 Call:
-    id  "("")" { printf("Function Call (Empty)"); }
-|   id  "(" Expr Expr_Comma ")" { printf("Function Call (Non-Empty)\n");  };
+    "id"  "("")" { printf("Function Call (Empty)"); }
+|   "id"  "(" Expr Expr_Comma ")" { printf("Function Call (Non-Empty)\n");  };
 
 
 Expr_Comma:
@@ -170,17 +171,17 @@ Expr_Comma:
 
 
 Atom:
-    id  { printf("Id\n");  }
-|   string_literal  { printf("String Literal\n");  }
+    "id"  { printf("Id\n");  }
+|   "string_literal"  { printf("String Literal\n");  }
 |   Atom "[" Expr "]"  { printf("Array\n");  }
 |   Call {printf("Call\n"); };
 
 
 Expr:
     Atom {$$=$1;}
-|   int_const { printf("IntConst\n"); }
-|   string_literal { printf("IntConst\n"); }
-|   char_const { printf("IntConst\n"); }
+|   "int_const" { printf("IntConst\n"); }
+|   "string_literal" { printf("IntConst\n"); }
+|   "char_const" { printf("IntConst\n"); }
 |   "(" Expr ")" { printf("ParExpr\n"); }
 |   Expr "+" Expr { printf("Plus\n"); }
 |   Expr "-" Expr { printf("Minus\n"); }
