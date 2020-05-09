@@ -5,8 +5,6 @@
 #include "lexer.hpp"
 #include "ast.hpp"
 
-std::map<char, int> globals;
-
 %}
 
 %union {

@@ -616,11 +616,11 @@ char *yytext;
 #line 1 "lexer.l"
 
 #line 6 "lexer.l"
+#include "ast.hpp"
 #include <cstdio>
 #include <cstdlib>
 #include "lexer.hpp"
 #include "parser.hpp"
-#include "ast.hpp"
 #line 625 "lexer.cpp"
 #line 14 "lexer.l"
 #define T_eof 0
@@ -953,7 +953,7 @@ do_action:	/* This label is used only to access EOF actions. */
 case 1:
 YY_RULE_SETUP
 #line 64 "lexer.l"
-{yyval.op[0]='a'; yyval.op[1]='n'; yyval.op[2]='d'; yyval.op[3]='\0';  return T_and;}
+{yylval.op[0]='a'; yylval.op[1]='n'; yylval.op[2]='d'; yylval.op[3]='\0';  return T_and;}
 	YY_BREAK
 case 2:
 YY_RULE_SETUP
@@ -998,7 +998,7 @@ YY_RULE_SETUP
 case 10:
 YY_RULE_SETUP
 #line 73 "lexer.l"
-{yyval.b= false; return T_false;}
+{yylval.b= false; return T_false;}
 	YY_BREAK
 case 11:
 YY_RULE_SETUP
@@ -1028,7 +1028,7 @@ YY_RULE_SETUP
 case 16:
 YY_RULE_SETUP
 #line 79 "lexer.l"
-{yyval.op[0]='m'; yyval.op[1]='o'; yyval.op[2]='d'; yyval.op[3]='\0'; return T_mod;}
+{yylval.op[0]='m'; yylval.op[1]='o'; yylval.op[2]='d'; yylval.op[3]='\0'; return T_mod;}
 	YY_BREAK
 case 17:
 YY_RULE_SETUP
@@ -1048,12 +1048,12 @@ YY_RULE_SETUP
 case 20:
 YY_RULE_SETUP
 #line 83 "lexer.l"
-{yyval.op[0]='n'; yyval.op[1]='o'; yyval.op[2]='t'; yyval.op[3]='\0';return T_not;}
+{yylval.op[0]='n'; yylval.op[1]='o'; yylval.op[2]='t'; yylval.op[3]='\0';return T_not;}
 	YY_BREAK
 case 21:
 YY_RULE_SETUP
 #line 84 "lexer.l"
-{yyval.op[0]='o'; yyval.op[1]='r'; yyval.op[2]='\0'; return T_or;}
+{yylval.op[0]='o'; yylval.op[1]='r'; yylval.op[2]='\0'; return T_or;}
 	YY_BREAK
 case 22:
 YY_RULE_SETUP
@@ -1078,7 +1078,7 @@ YY_RULE_SETUP
 case 26:
 YY_RULE_SETUP
 #line 89 "lexer.l"
-{yyval.b= true; return T_true;}
+{yylval.b= true; return T_true;}
 	YY_BREAK
 case 27:
 YY_RULE_SETUP
@@ -1090,10 +1090,10 @@ YY_RULE_SETUP
 #line 94 "lexer.l"
 {
     int i;
-    for(i=0; yylex[i]!='\0';i++)
-        yylval.op[i] = yylex[i];
+    for(i=0; yytext[i]!='\0';i++)
+        yylval.op[i] = yytext[i];
     
-    yyval.op[i] = '\0';
+    yylval.op[i] = '\0';
     
     return T_operator;}
 	YY_BREAK
@@ -1102,10 +1102,10 @@ YY_RULE_SETUP
 #line 103 "lexer.l"
 {
     int i;
-    for(i=0; yylex[i]!='\0';i++)
-        yylval.sep[i] = yylex[i];
+    for(i=0; yytext[i]!='\0';i++)
+        yylval.sep[i] = yytext[i];
     
-    yyval.sep[i] = '\0';
+    yylval.sep[i] = '\0';
     
     return T_seperator;}
 	YY_BREAK
@@ -1114,24 +1114,24 @@ YY_RULE_SETUP
 #line 112 "lexer.l"
 {
     int i;
-    for(i=0; yylex[i]!='\0';i++)
-        yylval.name[i] = yylex[i];
+    for(i=0; yytext[i]!='\0';i++)
+        yylval.name[i] = yytext[i];
     
-    yyval.name[i] = '\0';
+    yylval.name[i] = '\0';
     return T_id;} 
 	YY_BREAK
 case 31:
 YY_RULE_SETUP
 #line 120 "lexer.l"
-{yyval.c=yylex[1]; return T_singlechar;}
+{yylval.c=yytext[1]; return T_singlechar;}
 	YY_BREAK
 case 32:
 YY_RULE_SETUP
 #line 122 "lexer.l"
 {
     int i;
-    for(i=1;yylex[i] != '"';i++) yyval.str[i-1] = yylex[i];
-    yyval.str[i-1] = '\0';    
+    for(i=1;yytext[i] != '"';i++) yylval.str[i-1] = yytext[i];
+    yylval.str[i-1] = '\0';    
     return T_string;}
 	YY_BREAK
 case 33:
@@ -1176,7 +1176,7 @@ YY_RULE_SETUP
 case 40:
 YY_RULE_SETUP
 #line 140 "lexer.l"
-{yyerror("Error at line ", yylineno); exit (1);}
+{yyerror("Error at line "); exit (1);}
 	YY_BREAK
 case 41:
 YY_RULE_SETUP
@@ -2204,8 +2204,8 @@ void yyfree (void * ptr )
 #line 144 "lexer.l"
 
 
-void yyerror(const char *msg, const int line) {
-  fprintf(stderr, "%s%d\n", msg, line);
+void yyerror(const char *msg) {
+  fprintf(stderr, "%s\n", msg);
   exit(1);
 }
 
@@ -2220,4 +2220,3 @@ int main ()
     while (token != T_eof);
 return 0;
 }
-

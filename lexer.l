@@ -3,11 +3,11 @@
 %x COMMENT
 
 %{
+#include "ast.hpp"
 #include <cstdio>
 #include <cstdlib>
 #include "lexer.hpp"
 #include "parser.hpp"
-#include "ast.hpp"
 %}
 
 %{
@@ -60,7 +60,7 @@ P [\x20-\x7e]
 %%
     int comment_counter = 0;
 
-"and" {yyval.op[0]='a'; yyval.op[1]='n'; yyval.op[2]='d'; yyval.op[3]='\0';  return T_and;}
+"and" {yylval.op[0]='a'; yylval.op[1]='n'; yylval.op[2]='d'; yylval.op[3]='\0';  return T_and;}
 "bool" {return T_bool;}
 "char" {return T_char;}
 "decl" {return T_decl;}
@@ -69,59 +69,59 @@ P [\x20-\x7e]
 "elseif" {return T_elseif;}
 "end" {return T_end;}
 "exit" {return T_exit;}
-"false" {yyval.b= false; return T_false;}
+"false" {yylval.b= false; return T_false;}
 "for" {return T_for;}
 "head" {return T_head;}
 "if" {return T_if;}
 "int" {return T_int;}
 "list" {return T_list;}
-"mod" {yyval.op[0]='m'; yyval.op[1]='o'; yyval.op[2]='d'; yyval.op[3]='\0'; return T_mod;}
+"mod" {yylval.op[0]='m'; yylval.op[1]='o'; yylval.op[2]='d'; yylval.op[3]='\0'; return T_mod;}
 "new" {return T_new;}
 "nil" {return T_nil;}
 "nil?" {return T_nil2;}
-"not" {yyval.op[0]='n'; yyval.op[1]='o'; yyval.op[2]='t'; yyval.op[3]='\0';return T_not;}
-"or" {yyval.op[0]='o'; yyval.op[1]='r'; yyval.op[2]='\0'; return T_or;}
+"not" {yylval.op[0]='n'; yylval.op[1]='o'; yylval.op[2]='t'; yylval.op[3]='\0';return T_not;}
+"or" {yylval.op[0]='o'; yylval.op[1]='r'; yylval.op[2]='\0'; return T_or;}
 "ref" {return T_ref;}
 "return" {return T_return;}
 "skip" {return T_skip;}
 "tail" {return T_tail;}
-"true" {yyval.b= true; return T_true;}
+"true" {yylval.b= true; return T_true;}
 
 
 {D}* {yylval.num = atoi(yytext); return T_const;}
 
 {O}  {
     int i;
-    for(i=0; yylex[i]!='\0';i++)
-        yylval.op[i] = yylex[i];
+    for(i=0; yytext[i]!='\0';i++)
+        yylval.op[i] = yytext[i];
     
-    yyval.op[i] = '\0';
+    yylval.op[i] = '\0';
     
     return T_operator;}
 
 {S}  {
     int i;
-    for(i=0; yylex[i]!='\0';i++)
-        yylval.sep[i] = yylex[i];
+    for(i=0; yytext[i]!='\0';i++)
+        yylval.sep[i] = yytext[i];
     
-    yyval.sep[i] = '\0';
+    yylval.sep[i] = '\0';
     
     return T_seperator;}
 
 {L}+({L}|{D}|"_"|"?")* {
     int i;
-    for(i=0; yylex[i]!='\0';i++)
-        yylval.name[i] = yylex[i];
+    for(i=0; yytext[i]!='\0';i++)
+        yylval.name[i] = yytext[i];
     
-    yyval.name[i] = '\0';
+    yylval.name[i] = '\0';
     return T_id;} 
 
-"'"([\x20-\x26\x28-\x7e]|\\{E})"'" {yyval.c=yylex[1]; return T_singlechar;}
+"'"([\x20-\x26\x28-\x7e]|\\{E})"'" {yylval.c=yytext[1]; return T_singlechar;}
 
 \"([\x20-\x21\x23-\x7e]|\\\")*\" {
     int i;
-    for(i=1;yylex[i] != '"';i++) yyval.str[i-1] = yylex[i];
-    yyval.str[i-1] = '\0';    
+    for(i=1;yytext[i] != '"';i++) yylval.str[i-1] = yytext[i];
+    yylval.str[i-1] = '\0';    
     return T_string;}
 
 \\\%.*\x0a { /* One line comments */ }
@@ -136,14 +136,14 @@ P [\x20-\x7e]
 
 {W}+    { /* nothing */ }
 
-. {yyerror("Error at line ", yylineno); exit (1);}
+. {yyerror("Error at line "); exit (1);}
 
 
 
 %%
 
-void yyerror(const char *msg, const int line) {
-  fprintf(stderr, "%s%d\n", msg, line);
+void yyerror(const char *msg) {
+  fprintf(stderr, "%s\n", msg);
   exit(1);
 }
 
