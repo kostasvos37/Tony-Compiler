@@ -5,7 +5,7 @@
 #include <vector>
 #include <string>
 
-class AST {
+class AST{
 public:
   virtual ~AST() {}
   virtual void printOn(std::ostream &out) const = 0;
@@ -189,14 +189,14 @@ private:
 
 class New: public Expr {
 public:
-  New(std::string t, Expr *right): typ(t), expr(right){}
+  New(char *t, Expr *right): typ(std::string(t)), expr(right){}
   ~New() {delete expr;}
   virtual void printOn(std::ostream &out) const override {
     out << typ;
   }
   virtual void compile() const override {
     expr->compile();
-    printf("New %s\n", typ);
+    printf("New %s\n", typ.c_str());
   }
 private:
   std::string typ;
@@ -322,12 +322,12 @@ private:
 
 class If: public Stmt {
 public:
-  If(Expr *c, Stmt *s1, Stmt *s2 = nullptr):
+  If(Expr *c, Stmt *s1, Stmt *s2 = NULL):
     cond(c), stmt1(s1), stmt2(s2) {}
   ~If() { delete cond; delete stmt1; delete stmt2; }
   virtual void printOn(std::ostream &out) const override {
     out << "If(" << *cond << ", " << *stmt1;
-    if (stmt2 != nullptr) out << ", " << *stmt2;
+    if (stmt2 != NULL) out << ", " << *stmt2;
     out << ")";
   }
   virtual void compile() const override {
@@ -341,7 +341,7 @@ public:
     int l_end = counter++;
     printf("  jmp Lif%d\n", l_end);
     printf("Lif%d:\n", l_false);
-    if (stmt2 != nullptr)
+    if (stmt2 != NULL)
       stmt2->compile();
     printf("Lif%d:\n", l_end);
   }
