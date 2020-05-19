@@ -70,7 +70,7 @@
 
 
 //types
-%type<expr> Expr
+%type<expr> Expr Atom
 
 
 %%
@@ -174,14 +174,12 @@ Atom:
     id                 { $$ = new Id($1); }
 |   string_literal     { $$ = new StringLiteral($1); }
 |   Atom "[" Expr "]"  { $$ = new Array($1, $3); }
-|   Call               { $$ = $1; }
+|   Call               { $$ = $1; } 
 ;
 
-
 Expr:
-    Atom             {}
+    Atom             { $$ = $1; }
 |   int_const        { $$ = new IntConst($1); }
-|   string_literal   { $$ = new StringLiteral($1); }
 |   char_const       { $$ = new CharConst($1); }
 |   "(" Expr ")"     { $$ = $2; }
 |   Expr "+" Expr    { $$ = new BinOp($1, $2, $3); }
