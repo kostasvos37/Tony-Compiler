@@ -176,7 +176,7 @@ Atom:
 
 
 Expr:
-    Atom {$$=$1;}
+    Atom { $$=$1; }
 |   "int_const" { printf("IntConst\n"); }
 |   "string_literal" { printf("IntConst\n"); }
 |   "char_const" { printf("IntConst\n"); }

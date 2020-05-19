@@ -1,13 +1,13 @@
 %{
-
 // Actually to original to allaxa ston parser na mh ginontai mlkies me to makefile xanabalto meta idk
 #include <cstdio>
 #include <string.h>
 #include "lexer.hpp"
+#include "ast.hpp"
 
-std::map<char, int> globals;
 %}
 
+//
 %union {
   int num;
   char c;
@@ -176,7 +176,7 @@ Expr:
 |   Expr "and" Expr { $$ = new BinOp($1, $2, $3); }
 |   Expr "or" Expr { $$ = new BinOp($1, $2, $3); }
 |   "new" Type "[" Expr "]" { $$ = new New($2, $4); }
-|   "nil" 
+|   "nil" {}
 |   "nil?" "(" Expr ")" { $$ = new UnOp($1, $3); }
 |   Expr "#" Expr { $$ = new BinOp($1, $2, $3); }
 |   "head" "(" Expr ")" { $$ = new UnOp($1, $3); }

@@ -1,3 +1,6 @@
+#ifndef __AST_HPP___
+#define __AST_HPP___
+
 #pragma once
 
 #include <iostream>
@@ -20,15 +23,13 @@ inline std::ostream& operator<< (std::ostream &out, const AST &t) {
 
 class Expr: public AST {
 public:
-  
+  virtual void compile() const = 0;  
 };
 
 class Stmt: public AST {
 public:
-  
+  virtual void compile() const = 0;  
 };
-
-extern std::map<char, int> globals;
 
 class Id: public Expr {
 public:
@@ -65,6 +66,7 @@ public:
     out << "Const(" << num << ")";
   }
   virtual void compile() const override {
+    /*Εδώ θα μπει ο ενδιάμεσος κώδικας μετά*/
     printf("int_const == %d\n", num);
   }
 private:
@@ -78,6 +80,7 @@ public:
     out << "Char " << char_const << ")";
   }
   virtual void compile() const override {
+    /*Εδώ θα μπει ο ενδιάμεσος κώδικας μετά*/
     printf("string_literal == %c\n", char_const);
   }
 private:
@@ -91,6 +94,7 @@ public:
     out << "String" << " whateva " << ")";
   }
   virtual void compile() const override {
+    /*Εδώ θα μπει ο ενδιάμεσος κώδικας μετά*/
     printf("string_literal == %c\n", strlit[0]);
   }
 private:
@@ -110,7 +114,6 @@ private:
   bool boo;
 };
 
-
 class BinOp: public Expr {
 public:
   BinOp(Expr *l, char *o, Expr *r): left(l), op(std::string(o)), right(r) {}
@@ -121,6 +124,7 @@ public:
   virtual void compile() const override {
     left->compile();
     right->compile();
+    /*Στην θέση των παρακάτω θα μπει ο ενδιάμεσος κώδικας μετά*/
     if(op == "+")
       printf("operator +\n");
     else if(op == "-")
@@ -427,3 +431,5 @@ NL:\n\
 .asciz \"\\n\"\n\
 ");
 }
+
+#endif
