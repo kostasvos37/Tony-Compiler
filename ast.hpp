@@ -267,16 +267,17 @@ private:
   Expr *expr;
 };
 
-class SimpleList: public Stmt {
+class SimpleList: public AST {
 public:
   SimpleList(): simples() {}
-  SimpleList(Stmt *kyrios_stamou) {
-    std::vector<AST*> temp;
+  SimpleList(Stmt *simp) {
+    std::vector<Stmt*> temp;
     simples = temp;
-    simples.push_back(kyrios_stamou); // MEEEEEEEEEEEEEEEEEEEEEXRIS EDWPALIANES 
+    simples.push_back(simp); 
   }  
   ~SimpleList() { for (AST *e : simples) delete e; }
   void append(Stmt *e) { simples.push_back(e); }
+  void insert_front(Stmt *e) { simples.insert(simples.begin(), e); }
   virtual void printOn(std::ostream &out) const override {
     out << "SimpleList(";
     bool first = true;
@@ -293,7 +294,7 @@ public:
       e->compile();
   }
 private:
-  std::vector<AST*> simples;
+  std::vector<Stmt*> simples; 
 };
 
 
