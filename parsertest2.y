@@ -10,11 +10,13 @@
 πχ: στο ' %token<op> T_and "and" ' λέμε ότι το τερματικό "and" έχει τύπο op (που έχουμε ορίσει
 στο union) ο οποίος πρακτικά είναι ένας πίνακας από characters.
 
-Επίσης, ορίζουμε και τους σημασιολογικούς τύπους των μη τερματικών συμβόλων όπως το Expr
+Επίσης, ορίζουμε και τους σημασιολογικούς τύπους των μη τερματικών συμβόλων όπως το Expr,
 το Stmt κλπ.*/
 %union {
+    AST *ast;
     Expr *expr;
     Stmt *stmt;
+    Simple_List *simple_list;
     int num;
     char c;
     bool b;
@@ -68,14 +70,18 @@
 %left<op> UMINUS UPLUS
 
 
-//types
+//TYPES ΓΙΑ ΜΗ-ΤΕΡΜΑΤΙΚΑ
+%type<ast> Call
 %type<expr> Expr Atom
+%type<stmt> Stmt Simple
+%type<simple_list> Simple_List Simple_Comma
+
 
 
 %%
 
 Program:
-    Funcdef
+    Func_def
 ;
 
 Func_def:
@@ -144,16 +150,24 @@ Stmt:
 ;
 
 Simple:
-    "skip"          {$$ = new Skip();}
-|   Atom ":=" Expr  {$$ = new Let($1,$3);}
-|   Call            {$$ = $1;}
+    "skip"          { $$ = new Skip(); }
+|   Atom ":=" Expr  { $$ = new Let($1,$3); }
+|   Call            { $$ = $1; 
+}
 ;
 
+/* Εδώ έχουμε τα εξής προβλήματα
+1) Η append στον 2ο κανόνα της Simple_List χρησιμοποιείται
+σαν μέθοδος του Simple. Κάνει append μια λίστα σε ένα Simple
+αντί να κάνει το αντίθετο.*/
 Simple_List:
     Simple                  { $$ = new SimpleList($1); }
-|   Simple  Simple_Comma    { $1->append($3); $$ = $1; }
+|   Simple  Simple_Comma    { $1->append($2); $$ = $1; }
 ;
 
+/* Υλοποιεί το ("," Simple)* της γραμματικής.
+Το SimpleList() κατασκευάζει μια κενή λίστα από Simples η οποία
+θα γίνει append. */
 Simple_Comma:
     /*ε*/  { $$ = new SimpleList(); }
 |   Simple_Comma "," Simple { $1->append($3); $$ = $1; }
