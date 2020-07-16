@@ -152,17 +152,12 @@ Stmt:
 Simple:
     "skip"          { $$ = new Skip(); }
 |   Atom ":=" Expr  { $$ = new Let($1,$3); }
-|   Call            { $$ = $1; 
-}
+|   Call            { $$ = $1; }
 ;
 
-/* Εδώ έχουμε τα εξής προβλήματα
-1) Η append στον 2ο κανόνα της Simple_List χρησιμοποιείται
-σαν μέθοδος του Simple. Κάνει append μια λίστα σε ένα Simple
-αντί να κάνει το αντίθετο.*/
 Simple_List:
     Simple                  { $$ = new SimpleList($1); }
-|   Simple  Simple_Comma    { $1->append($2); $$ = $1; }
+|   Simple  Simple_Comma    { $2->insert_front($1); $$ = $2; }
 ;
 
 /* Υλοποιεί το ("," Simple)* της γραμματικής.
