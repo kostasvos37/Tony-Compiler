@@ -1,5 +1,4 @@
 %{
-// Actually to original to allaxa ston parser na mh ginontai malakies me to makefile xanabalto meta idk
 #include <cstdio>
 #include <string.h>
 #include "lexer.hpp"
