@@ -210,11 +210,9 @@ private:
 
 class FunctionCall: public AST {
 public:
-  FunctionCall(): parameters() {}
   FunctionCall(char *n): name(std::string(n)), parameters() {}
+  FunctionCall(char *n, std::vector<Expr*> param): name(std::string(n)), parameters(param) {}
   ~FunctionCall() { for (Expr *e : parameters) delete e; }
-  void append(Expr *e) { parameters.push_back(e); }
-  void setName(char *n) { name = std::string(name);}
   virtual void printOn(std::ostream &out) const override {
     out << "FunctionCall(";
     bool first = true;
