@@ -16,7 +16,8 @@
     AST *ast;
     Expr *expr;
     Stmt *stmt;
-    Simple_List *simple_list;
+    SimpleList *simple_list;
+    ExprList *expr_list;
     int num;
     char c;
     bool b;
@@ -75,7 +76,7 @@
 %type<expr> Expr Atom
 %type<stmt> Stmt Simple
 %type<simple_list> Simple_List Simple_Comma
-
+%type<expr_list> Expr_Comma
 
 
 %%
@@ -174,7 +175,7 @@ Call:
 ;
 
 Expr-Comma:
-    /*ε*/ { $$ = new FunctionCall(); }
+    /*ε*/ { $$ = new ExprList(); }
 |   Expr_Comma "," Expr { $1->append($3); $$ = $1; }
 ;
 
