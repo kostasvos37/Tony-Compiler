@@ -275,13 +275,13 @@ public:
     simples = temp;
     simples.push_back(simp); 
   }  
-  ~SimpleList() { for (AST *e : simples) delete e; }
+  ~SimpleList() { for (Stmt *e : simples) delete e; }
   void append(Stmt *e) { simples.push_back(e); }
   void insert_front(Stmt *e) { simples.insert(simples.begin(), e); }
   virtual void printOn(std::ostream &out) const override {
     out << "SimpleList(";
     bool first = true;
-    for (AST *e : simples) {
+    for (Stmt *e : simples) {
       if (!first) out << ", ";
       first = false;
       out << *e;
@@ -290,14 +290,22 @@ public:
   }
   virtual void compile() const override {
     printf("SimpleList and these are my stitches: \n");
-    for (AST *e : simples)
+    for (Stmt *e : simples)
       e->compile();
   }
 private:
   std::vector<Stmt*> simples; 
 };
 
-
+class ExprList: public AST {
+public:
+  ExprList(): expressions() {}
+  ~ExprList() { for (Expr *e : expressions) delete e; }
+  void append(Expr *e) { expressions.push_back(e); }
+  void insert_front(Expr *e) { expressions.insert(expressions.begin(), e); }
+private:
+  std::vector<Expr*> expressions;
+};
 
 //PROSOXH TA FUNCTION CALLS MAY BE EXPRESSIONS H STATEMENTS
 
