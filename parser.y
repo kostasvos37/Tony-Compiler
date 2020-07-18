@@ -170,12 +170,12 @@ Simple_Comma:
 ;
 
 Call:
-    id  "("")" { $$ = new FunctionCall($1);}
-|   id  "(" Expr Expr-Comma ")" { $4->append($3); $4->setName($1); $$ = $4 }
+    id  "("")"                  { $$ = new FunctionCall($1);}
+|   id  "(" Expr Expr-Comma ")" { $4->insert_front($3); $$ = new FunctionCall($1, $4); }
 ;
 
 Expr-Comma:
-    /*ε*/ { $$ = new ExprList(); }
+    /*ε*/               { $$ = new ExprList(); }
 |   Expr_Comma "," Expr { $1->append($3); $$ = $1; }
 ;
 
