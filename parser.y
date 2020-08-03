@@ -71,8 +71,8 @@
 %left<op> UMINUS UPLUS
 
 
-//TYPES ΓΙΑ ΜΗ-ΤΕΡΜΑΤΙΚΑ
-%type<ast> Call
+//types για μη τερματικά σύμβολα
+%type<ast> Call Stmt_Body Stmt_Elsif_Body
 %type<expr> Expr Atom
 %type<stmt> Stmt Simple
 %type<simple_list> Simple_List Simple_Comma
@@ -86,7 +86,7 @@ Program:
 ;
 
 Func_def:
-    "def" Header ":" Func_def_dec  Stmt_body "end"
+    "def" Header ":" Func_def_dec  Stmt_Body "end"
 ;
 
 Func_def_dec:
@@ -94,11 +94,6 @@ Func_def_dec:
 |   Func_def_dec Func_decl
 |   Func_def_dec Var_def
 |   /*ε*/
-;
-
-Stmt_body:
-    Stmt
-|   Stmt_body Stmt
 ;
 
 Header:
@@ -142,13 +137,23 @@ Var_Def:
 ;
 
 Stmt:
-    Simple
+    Simple  { $$ = $1; }
 |   "exit"
-|   "return" Expr
-|   "if" Expr ":" Stmt_body Stmt_Else_body "end"
-|   "if" Expr ":" Stmt_body Stmt_Else_body "else" ":" Stmt_body "end"
-|   "for" Simple_List ";" Expr ";" Simple_List ":" Stmt_body "end"
+|   "return" Expr   { $$ = new Return($2); }
+|   "if" Expr ":" Stmt_Body Stmt_Elsif_Body "end"   { $$ = new If($2, $4, $5); }
+|   "if" Expr ":" Stmt_Body Stmt_Elsif_Body "else" ":" Stmt_Body "end"  { $$ = new If($2, $4, $5, $8); }
+|   "for" Simple_List ";" Expr ";" Simple_List ":" Stmt_Body "end"
 ;
+
+Stmt_Body:
+    Stmt    { $$ = new StmtBody(); }
+|   Stmt_Body Stmt  { $1->append($2); $$ = $1 } 
+;
+
+Stmt_Elsif_Body:
+    /*ε*/  { $$ = new Elsif(); }
+|   "elsif" Expr ":" Stmt_Body Stmt_Elsif_Body  { $5->append($2, $4); $$ = $5; } /* ισως χρειαστει inverse */
+
 
 Simple:
     "skip"          { $$ = new Skip(); }
