@@ -18,6 +18,7 @@
     Stmt *stmt;
     SimpleList *simple_list;
     ExprList *expr_list;
+    VarList *var_list;
     int num;
     char c;
     bool b;
@@ -77,6 +78,7 @@
 %type<stmt> Stmt Simple
 %type<simple_list> Simple_List Simple_Comma
 %type<expr_list> Expr_Comma
+%type<var_list> Var_Comma
 
 
 %%
@@ -115,8 +117,8 @@ Formal:
 ;
 
 Var_Comma:
-    /* e*/
-|   Var_Comma , id
+    /* e*/  { $$ = new VarList(); }
+|   Var_Comma , id  { $1->append($3); $$ = $1; }
 ;
 
 Type:
@@ -138,11 +140,17 @@ Var_Def:
 
 Stmt:
     Simple  { $$ = $1; }
-|   "exit"
+|   "exit"  { $$ = new Exit(); }
 |   "return" Expr   { $$ = new Return($2); }
 |   "if" Expr ":" Stmt_Body Stmt_Elsif_Body "end"   { $$ = new If($2, $4, $5); }
 |   "if" Expr ":" Stmt_Body Stmt_Elsif_Body "else" ":" Stmt_Body "end"  { $$ = new If($2, $4, $5, $8); }
-|   "for" Simple_List ";" Expr ";" Simple_List ":" Stmt_Body "end"
+|   "for" Simple_List ";" Expr ";" Simple_List ":" Stmt_Body "end"  { $$ = new For($2, $4, $6, $8); }
+;
+
+Simple:
+    "skip"          { $$ = new Skip(); }
+|   Atom ":=" Expr  { $$ = new Let($1,$3); }
+|   Call            { $$ = $1; }
 ;
 
 Stmt_Body:
@@ -154,12 +162,6 @@ Stmt_Elsif_Body:
     /*ε*/  { $$ = new Elsif(); }
 |   "elsif" Expr ":" Stmt_Body Stmt_Elsif_Body  { $5->append($2, $4); $$ = $5; } /* ισως χρειαστει inverse */
 
-
-Simple:
-    "skip"          { $$ = new Skip(); }
-|   Atom ":=" Expr  { $$ = new Let($1,$3); }
-|   Call            { $$ = $1; }
-;
 
 Simple_List:
     Simple                  { $$ = new SimpleList($1); }

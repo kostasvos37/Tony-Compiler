@@ -244,6 +244,11 @@ private:
   std::vector<Expr*> parameters;
 };
 
+class Exit: public Stmt{
+public:
+  Exit() {}
+};
+
 class Return: public Stmt{
 public:
   Return(Expr* e): ret_expr(e) {}
@@ -321,6 +326,15 @@ private:
   std::vector<Expr*> expressions;
 };
 
+class VarList: public AST {
+public:
+  VarList(): ids() {}
+  void append(std::string id) {
+    ids.push_back(id);
+  }
+private:
+  std::vector<std::string> ids;
+};
 
 class Print: public Stmt {
 public:
@@ -351,8 +365,8 @@ public:
   If(Expr *c, StmtBody *s, Elsif *e, Stmt *else_s = nullptr) {
       main_cond = c;
       main_stmt_body = s;
-      elsif_conds = e->get_conds;
-      elsif_stmt_bodies = e->get_stmt_bodies;
+      elsif_conds = e->get_conds();
+      elsif_stmt_bodies = e->get_stmt_bodies();
       else_stmt = else_s;
     }
   ~If() {
@@ -403,8 +417,13 @@ private:
 
 class For: public Stmt {
 public:
-  For(Expr *e, Stmt *s): expr(e), stmt(s) {}
-  ~For() { delete expr; delete stmt; }
+  For(SimpleList *sl1, Expr *e, SimpleList *sl2, StmtBody *sb):
+    simple_list1(sl1), expr(e), simple_list2(sl2), stmt_body(sb)  {}
+  ~For() {
+    delete simple_list1;
+    delete expr;
+    delete simple_list2;
+    delete stmt_body; }
   virtual void printOn(std::ostream &out) const override {
     out << "For(" << *expr << ", " << *stmt << ")";
   }
@@ -424,8 +443,10 @@ public:
     printf("Lfor%d:\n", l_end);
   }
 private:
+  SimpleList *simple_list1;
   Expr *expr;
-  Stmt *stmt;
+  SimpleList *simple_list2;
+  StmtBody *stmt_body;
 };
 
 
