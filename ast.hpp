@@ -333,8 +333,28 @@ private:
 
 // Done
 class FunctionCall: public AST {
+public:
+  FunctionCall(char *n): name(std::string(n)), parameters() {}	
+  FunctionCall(char *n, std::vector<Expr*> param): name(std::string(n)), parameters(param) {}
+  ~FunctionCall() { for (Expr *e : parameters) delete e; }
+  virtual void printOn(std::ostream &out) const override {
+    out << "FunctionCall(";
+    for (Expr *e : parameters) {
+      out << *e << ", ";
+    }
+    out << ")";
+  }
+  
+  virtual void compile() const override {
+    printf("Function call and these are my bitches: \n");
+    for (Expr *e : parameters) e->compile();
+  }
+  private:	
+  std::string name;	
+  std::vector<Expr*> parameters;	
+};
 
-// Dpme
+// Done
 class ExprList: public AST {
 public:
   ExprList(): expressions() {}
@@ -361,18 +381,18 @@ private:
   std::vector<Expr*> expressions;
 };
 
-// TODO : Prepei na ginei alliws auto stante se lew, ALERT SIGOURA LA8OS BASIKA
+// Done
 class VarList: public AST {
 public:
   VarList(): ids() {}
-  void append(std::string id) {
+  void append(Expr * id) {
     ids.push_back(id);
   }
 
   virtual void printOn(std::ostream &out) const override {
     out << "VarList(";
     bool first = true;
-    for (std::string i : ids) {
+    for (Expr * i : ids) {
       if (!first) out << ", ";
       first = false;
       out << i;
@@ -380,15 +400,13 @@ public:
     out << ")";
   }
   virtual void compile() const override {
-    printf("VarList and these are my asdewo12@#!&$)!&^: \n");
-    for (std::string i : ids)
-      printf("%s \n", i); //edw tha prepe na nai kana COMPILE, lew gw twra
+    printf("VarList and these are my variantes: \n");
+    for (Expr * e : ids)
+      e->compile(); //edw tha prepe na nai kana COMPILE, lew gw twra
     }
 private:
-  std::vector<std::string> ids;
+  std::vector<Expr *> ids;
 };
-
-
 
 // Done
 class Print: public Stmt {
