@@ -30,6 +30,7 @@ public:
   virtual void compile() const = 0;  
 };
 
+// Done
 class StmtBody: public AST {
 public:
   StmtBody(): stmts() {}
@@ -38,10 +39,24 @@ public:
     stmts.push_back(stmt);
     return;
   }
+  virtual void printOn(std::ostream &out) const override {
+    out << "StmtBody(";
+    for (Stmt *s : stmts) {
+      out << *s << ", " ;
+    }
+    out << "endStmtBody)";
+  }
+  virtual void compile() const override {
+    printf("Stmt body, check these out : \n");
+    for (Stmt *fwtakaros : stmts)
+      fwtakaros->compile();
+  }
+  
 private:
   std::vector<Stmt*> stmts;
 };
 
+// Done
 class Id: public Expr {
 public:
   Id(char *v): var(std::string(v)) {}
@@ -55,6 +70,7 @@ private:
   std::string var;
 };
 
+// Done
 class Array: public Expr {
 public:
   Array(char *t): typ(std::string(t)) {}
@@ -70,6 +86,7 @@ private:
   Expr *expr;
 };
 
+// Done
 class IntConst: public Expr {
 public:
   IntConst(int n): num(n) {}
@@ -84,6 +101,7 @@ private:
   int num;
 };
 
+// Done
 class CharConst: public Expr {
 public:
   CharConst(char c): char_const(c) {}
@@ -98,6 +116,7 @@ private:
   char char_const;
 };
 
+// Done
 class StringLiteral: public Expr {
 public:
   StringLiteral(char str[]): strlit(str) {}
@@ -112,6 +131,7 @@ private:
   char *strlit;
 };
 
+// Done
 class Boolean: public Expr {
 public:
   Boolean(bool b): boo(b) {} //wink wink pap
@@ -125,6 +145,7 @@ private:
   bool boo;
 };
 
+// Done
 class BinOp: public Expr {
 public:
   BinOp(Expr *l, char *o, Expr *r): left(l), op(std::string(o)), right(r) {}
@@ -173,6 +194,7 @@ private:
   Expr *right;
 };
 
+// Done
 class UnOp: public Expr {
 public:
   UnOp(char *o, Expr *r): op(std::string(o)), right(r) {}
@@ -202,6 +224,7 @@ private:
   Expr *right;
 };
 
+// Done
 class New: public Expr {
 public:
   New(char *t, Expr *right): typ(std::string(t)), expr(right){}
@@ -218,44 +241,34 @@ private:
   Expr *expr;
 };
 
-
-class FunctionCall: public AST {
-public:
-  FunctionCall(char *n): name(std::string(n)), parameters() {}
-  FunctionCall(char *n, std::vector<Expr*> param): name(std::string(n)), parameters(param) {}
-  ~FunctionCall() { for (Expr *e : parameters) delete e; }
-  virtual void printOn(std::ostream &out) const override {
-    out << "FunctionCall(";
-    bool first = true;
-    for (Expr *e : parameters) {
-      if (!first) out << ", ";
-      first = false;
-      out << *e;
-    }
-    out << ")";
-  }
-  virtual void compile() const override {
-    printf("Function call and these are my bitches: \n");
-    for (Expr *e : parameters)
-      e->compile();
-  }
-private:
-  std::string name;
-  std::vector<Expr*> parameters;
-};
-
+// Done
 class Exit: public Stmt{
 public:
   Exit() {}
+  virtual void printOn(std::ostream &out) const override {
+    out << "Exit() ";
+  }
+  virtual void compile() const override {
+    printf("exit\n");
+  }
 };
 
+// Done
 class Return: public Stmt{
 public:
   Return(Expr* e): ret_expr(e) {}
 private: 
+virtual void printOn(std::ostream &out) const override {
+    out << "Return( " << *ret_expr << ")";
+  }
+  virtual void compile() const override {
+    printf("Return(), expression = \n");
+    ret_expr->compile();
+  }
   Expr* ret_expr;
 };
 
+// Done
 class Skip: public Stmt{
 public:
   Skip() {}
@@ -267,6 +280,7 @@ public:
   }
 };
 
+// Done
 class Let: public Stmt {
 public:
   Let(Expr *a, Expr *e): atom(a), expr(e) {}
@@ -286,6 +300,7 @@ private:
   Expr *expr;
 };
 
+// Done
 class SimpleList: public AST {
 public:
   SimpleList(): simples() {}
@@ -316,26 +331,66 @@ private:
   std::vector<Stmt*> simples; 
 };
 
+// Done
+class FunctionCall: public AST {
+
+// Dpme
 class ExprList: public AST {
 public:
   ExprList(): expressions() {}
   ~ExprList() { for (Expr *e : expressions) delete e; }
   void append(Expr *e) { expressions.push_back(e); }
-  void insert_front(Expr *e) { expressions.insert(expressions.begin(), e); }
+  void insert_front(Expr *e) { expressions.insert(expressions.begin(), e);}
+
+  virtual void printOn(std::ostream &out) const override {
+    out << "ExprList(";
+    bool first = true;
+    for (Expr *e : expressions) {
+      if (!first) out << ", ";
+      first = false;
+      out << *e;
+    }
+    out << ")";
+  }
+  virtual void compile() const override {
+    printf("ExprList and these are my stitches: \n");
+    for (Expr *e : expressions)
+      e->compile();
+  }
 private:
   std::vector<Expr*> expressions;
 };
 
+// TODO : Prepei na ginei alliws auto stante se lew, ALERT SIGOURA LA8OS BASIKA
 class VarList: public AST {
 public:
   VarList(): ids() {}
   void append(std::string id) {
     ids.push_back(id);
   }
+
+  virtual void printOn(std::ostream &out) const override {
+    out << "VarList(";
+    bool first = true;
+    for (std::string i : ids) {
+      if (!first) out << ", ";
+      first = false;
+      out << i;
+    }
+    out << ")";
+  }
+  virtual void compile() const override {
+    printf("VarList and these are my asdewo12@#!&$)!&^: \n");
+    for (std::string i : ids)
+      printf("%s \n", i); //edw tha prepe na nai kana COMPILE, lew gw twra
+    }
 private:
   std::vector<std::string> ids;
 };
 
+
+
+// Done
 class Print: public Stmt {
 public:
   Print(Expr *e): expr(e) {}
@@ -360,6 +415,7 @@ private:
   Expr *expr;
 };
 
+// TODO : Dex xerw ti paizei
 class If: public Stmt {
 public:
   If(Expr *c, StmtBody *s, Elsif *e, Stmt *else_s = nullptr) {
@@ -393,6 +449,8 @@ private:
   Stmt *else_stmt;
 };
 
+
+// TODO : Ta idia
 class Elsif: public Stmt {
 public:
   Elsif(): elsif_conds(), elsif_stmt_bodies() {}
@@ -415,6 +473,7 @@ private:
   std::vector<StmtBody *> elsif_stmt_bodies;
 };
 
+// TODO : Kati exeis kanei de to sbhnw
 class For: public Stmt {
 public:
   For(SimpleList *sl1, Expr *e, SimpleList *sl2, StmtBody *sb):
