@@ -15,7 +15,6 @@ public:
   virtual void compile() const = 0;
 };
 
-//not sure what this does
 inline std::ostream& operator<< (std::ostream &out, const AST &t) {
   t.printOn(out);
   return out;
@@ -29,6 +28,18 @@ public:
 class Stmt: public AST {
 public:
   virtual void compile() const = 0;  
+};
+
+class StmtBody: public AST {
+public:
+  StmtBody(): stmts() {}
+  ~StmtBody() { for (Stmt *s : stmts) delete s; }
+  void append(Stmt* stmt) {
+    stmts.push_back(stmt);
+    return;
+  }
+private:
+  std::vector<Stmt*> stmts;
 };
 
 class Id: public Expr {
@@ -210,11 +221,9 @@ private:
 
 class FunctionCall: public AST {
 public:
-  FunctionCall(): parameters() {}
   FunctionCall(char *n): name(std::string(n)), parameters() {}
+  FunctionCall(char *n, std::vector<Expr*> param): name(std::string(n)), parameters(param) {}
   ~FunctionCall() { for (Expr *e : parameters) delete e; }
-  void append(Expr *e) { parameters.push_back(e); }
-  void setName(char *n) { name = std::string(name);}
   virtual void printOn(std::ostream &out) const override {
     out << "FunctionCall(";
     bool first = true;
@@ -235,7 +244,17 @@ private:
   std::vector<Expr*> parameters;
 };
 
+class Exit: public Stmt{
+public:
+  Exit() {}
+};
 
+class Return: public Stmt{
+public:
+  Return(Expr* e): ret_expr(e) {}
+private: 
+  Expr* ret_expr;
+};
 
 class Skip: public Stmt{
 public:
@@ -267,20 +286,21 @@ private:
   Expr *expr;
 };
 
-class SimpleList: public Stmt {
+class SimpleList: public AST {
 public:
   SimpleList(): simples() {}
-  SimpleList(Stmt *kyrios_stamou) {
-    std::vector<AST*> temp;
+  SimpleList(Stmt *simp) {
+    std::vector<Stmt*> temp;
     simples = temp;
-    simples.push_back(kyrios_stamou); // MEEEEEEEEEEEEEEEEEEEEEXRIS EDWPALIANES 
+    simples.push_back(simp); 
   }  
-  ~SimpleList() { for (AST *e : simples) delete e; }
+  ~SimpleList() { for (Stmt *e : simples) delete e; }
   void append(Stmt *e) { simples.push_back(e); }
+  void insert_front(Stmt *e) { simples.insert(simples.begin(), e); }
   virtual void printOn(std::ostream &out) const override {
     out << "SimpleList(";
     bool first = true;
-    for (AST *e : simples) {
+    for (Stmt *e : simples) {
       if (!first) out << ", ";
       first = false;
       out << *e;
@@ -289,16 +309,32 @@ public:
   }
   virtual void compile() const override {
     printf("SimpleList and these are my stitches: \n");
-    for (AST *e : simples)
+    for (Stmt *e : simples)
       e->compile();
   }
 private:
-  std::vector<AST*> simples;
+  std::vector<Stmt*> simples; 
 };
 
+class ExprList: public AST {
+public:
+  ExprList(): expressions() {}
+  ~ExprList() { for (Expr *e : expressions) delete e; }
+  void append(Expr *e) { expressions.push_back(e); }
+  void insert_front(Expr *e) { expressions.insert(expressions.begin(), e); }
+private:
+  std::vector<Expr*> expressions;
+};
 
-
-//PROSOXH TA FUNCTION CALLS MAY BE EXPRESSIONS H STATEMENTS
+class VarList: public AST {
+public:
+  VarList(): ids() {}
+  void append(std::string id) {
+    ids.push_back(id);
+  }
+private:
+  std::vector<std::string> ids;
+};
 
 class Print: public Stmt {
 public:
@@ -326,39 +362,68 @@ private:
 
 class If: public Stmt {
 public:
-  If(Expr *c, Stmt *s1, Stmt *s2 = NULL):
-    cond(c), stmt1(s1), stmt2(s2) {}
-  ~If() { delete cond; delete stmt1; delete stmt2; }
+  If(Expr *c, StmtBody *s, Elsif *e, Stmt *else_s = nullptr) {
+      main_cond = c;
+      main_stmt_body = s;
+      elsif_conds = e->get_conds();
+      elsif_stmt_bodies = e->get_stmt_bodies();
+      else_stmt = else_s;
+    }
+  ~If() {
+    delete main_cond;
+    delete main_stmt_body;
+    for (Expr* e: elsif_conds) delete e;
+    for (StmtBody* s: elsif_stmt_bodies) delete s;
+    delete else_stmt; }
+  void append_elsif(Elsif* elsif) {
+    elsif_conds = elsif->get_conds();
+    elsif_stmt_bodies = elsif->get_stmt_bodies();
+    return;
+  }
   virtual void printOn(std::ostream &out) const override {
     out << "If(" << *cond << ", " << *stmt1;
-    if (stmt2 != NULL) out << ", " << *stmt2;
+    if (stmt2 != nullptr) out << ", " << *stmt2;
     out << ")";
   }
-  virtual void compile() const override {
-    static int counter = 0;
-    cond->compile();
-    printf("  popl %%eax\n");
-    printf("  andl %%eax, %%eax\n");
-    int l_false = counter++;
-    printf("  jz Lif%d\n", l_false);
-    stmt1->compile();
-    int l_end = counter++;
-    printf("  jmp Lif%d\n", l_end);
-    printf("Lif%d:\n", l_false);
-    if (stmt2 != NULL)
-      stmt2->compile();
-    printf("Lif%d:\n", l_end);
+private:
+  Expr *main_cond;
+  StmtBody *main_stmt_body;
+  std::vector<Expr *> elsif_conds;
+  std::vector<StmtBody *> elsif_stmt_bodies;
+  Stmt *else_stmt;
+};
+
+class Elsif: public Stmt {
+public:
+  Elsif(): elsif_conds(), elsif_stmt_bodies() {}
+  ~Elsif() {
+    for (Expr* e: elsif_conds) delete e;
+    for (StmtBody* s: elsif_stmt_bodies) delete s;
+  }
+  std::vector<Expr *> get_conds() {
+    return elsif_conds;
+  }
+  std::vector<StmtBody *> get_stmt_bodies() {
+    return elsif_stmt_bodies;
+  }
+  void append(Expr* e, StmtBody* s) {
+    elsif_conds.push_back(e);
+    elsif_stmt_bodies.push_back(s);
   }
 private:
-  Expr *cond;
-  Stmt *stmt1;
-  Stmt *stmt2;
+  std::vector<Expr *> elsif_conds;
+  std::vector<StmtBody *> elsif_stmt_bodies;
 };
 
 class For: public Stmt {
 public:
-  For(Expr *e, Stmt *s): expr(e), stmt(s) {}
-  ~For() { delete expr; delete stmt; }
+  For(SimpleList *sl1, Expr *e, SimpleList *sl2, StmtBody *sb):
+    simple_list1(sl1), expr(e), simple_list2(sl2), stmt_body(sb)  {}
+  ~For() {
+    delete simple_list1;
+    delete expr;
+    delete simple_list2;
+    delete stmt_body; }
   virtual void printOn(std::ostream &out) const override {
     out << "For(" << *expr << ", " << *stmt << ")";
   }
@@ -378,32 +443,12 @@ public:
     printf("Lfor%d:\n", l_end);
   }
 private:
+  SimpleList *simple_list1;
   Expr *expr;
-  Stmt *stmt;
+  SimpleList *simple_list2;
+  StmtBody *stmt_body;
 };
 
-class Block: public Stmt {
-public:
-  Block(): stmt_list() {}
-  ~Block() { for (Stmt *s : stmt_list) delete s; }
-  void append(Stmt *s) { stmt_list.push_back(s); }
-  virtual void printOn(std::ostream &out) const override {
-    out << "Block(";
-    bool first = true;
-    for (Stmt *s : stmt_list) {
-      if (!first) out << ", ";
-      first = false;
-      out << *s;
-    }
-    out << ")";
-  }
-  virtual void compile() const override {
-    for (Stmt *s : stmt_list)
-      s->compile();
-  }
-private:
-  std::vector<Stmt *> stmt_list;
-};
 
 inline void prologue() {
   printf("\
