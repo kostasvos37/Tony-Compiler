@@ -1,0 +1,37 @@
+def putc():
+  def malloc(int i):
+    puti(i)
+  end
+
+  def GC_malloc(int i):
+    puti(i)
+  end
+
+  def puti(list[int] a):
+    list[int] b
+
+    if not nil?(tail(a)):
+      b := head(a) # nil
+      puti(b)
+    else:
+      malloc(head(a))
+    end
+  end
+
+  def gets(int i):
+    list[int] a
+    a := i # 16014 # nil
+    puti(a)
+  end
+
+  list[int] a
+  a := 42 # nil
+  malloc(head(a))
+  puts(" ")
+  GC_malloc(head(a))
+  puts(" ")
+  gets(17)
+  puts("\n")
+
+  % EXPECTED OUTPUT: 42 42 17
+end
