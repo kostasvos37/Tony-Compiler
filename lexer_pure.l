@@ -1,15 +1,8 @@
-%option noyywrap
-%option yylineno
-%x COMMENT
-
 %{
 #include <cstdio>
 #include <cstdlib>
 #include "lexer.hpp"
 
-%}
-
-%{
 #define T_eof 0
 #define T_id 1001 
 #define T_and 1002
@@ -41,24 +34,38 @@
 #define T_const 1028
 #define T_singlechar 1029
 #define T_string 1030
-#define T_operator 1031
-#define T_seperator 1032
-
+#define T_le 1031
+#define T_ge 1032 
+#define T_ne 1033
+#define T_assign 1034
 
 void ERROR (const char msg []);
+int comment_counter = 0;
+int linecount=1;
+/*
+    L -> Letters
+    D -> Digits
+    W -> White characaters
+    E -> Escape characaters
+    O -> Operators
+    S -> Seperators
+    P -> Printable characters
+*/
 %}
 
-    int comment_counter = 0;
-    int linecount=1;
 
 
 L [a-zA-Z]
 D [0-9]
 W [ \r\t]
 E [ntr0'"\\]|[x][0-9A-F][0-9A-F]
-O [\+\-\*\/\#\=\<\>]|"<>"|"<="|">="
-S [\(\)\[\]\,\;\:]|":="
+O [\+\-\*\/\#\=\<\>]
+S [\(\)\[\]\,\;\:]
 P [\x20-\x7e]
+
+%option noyywrap
+%option yylineno
+%x COMMENT
 
 %%
 "and" { return T_and;}
@@ -91,13 +98,13 @@ P [\x20-\x7e]
 
 {D}+ {return T_const;}
 
-{O}  {
-    
-    return T_operator;}
+{O}  {return yytext[0];}
+"<="				{ return T_le;	}
+">="				{ return T_ge;}
+"<>"				{ return T_ne;}
 
-{S}  {
-    
-    return T_seperator;}
+{S}            {return yytext[0];}
+":="				{ return T_assign;	}
 
 {L}({L}|{D}|"_"|"?")* {
     return T_id;} 
@@ -116,8 +123,8 @@ P [\x20-\x7e]
 
 <COMMENT>[^\n]          {/* do nothing */}
 <COMMENT>\n             {/* change line | do nothing */ linecount++; }
-{W}         { /* nothing */ }
-\n			{ /* nothing */ linecount++;}
+{W}+         { /* nothing */ }
+\n			{ linecount++;}
 
 . {yyerror("Error at line ", linecount); exit (1);}
 
