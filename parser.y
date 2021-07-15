@@ -13,7 +13,7 @@
 Επίσης, ορίζουμε και τους σημασιολογικούς τύπους των μη τερματικών συμβόλων όπως το Expr,
 το Stmt κλπ.*/
 %union {
-    AST *ast;
+    /* AST *ast;
     Expr *expr;
     Stmt *stmt;
     SimpleList *simple_list;
@@ -25,60 +25,82 @@
     char op[4];
     char sep[2];
     char name[80]; //!!
-    char str[80]; //!!
+    char str[80]; //!! */
+    const char *name;
+    int num;
+    struct expr {
+        int temp;
+    } Expr;
+    struct valu {
+        int temp;
+    } Value;
+    struct stmt {
+        int temp;
+    } Stmt;
+    struct call {
+        int temp;
+    } Call;
+    struct atom {
+        int temp;
+    } Atom;    
 }
 
-%token<name> T_id       "id"
-%token<op> T_and        "and"
-%token<op> T_mod        "mod"
-%token<op> T_not        "not"
-%token<op> T_or         "or"
-%token<op> T_operator   "operator"
-%token<sep> T_seperator "seperator"
-%token<b> T_true        "true"
-%token<b> T_false       "false"
-%token<num> T_const     "int_const"
-%token<str> T_string    "string_literal"
-%token<c> T_singlechar  "char_const"
+%token T_and            "and"
 %token T_bool           "bool"
 %token T_char           "char"
 %token T_decl           "decl"
 %token T_def            "def"
 %token T_else           "else"
-%token T_elseif         "elsif"
+%token T_elsif          "elsif"
 %token T_end            "end"
 %token T_exit           "exit"
+%token T_false          "false"
 %token T_for            "for"
 %token T_head           "head"
 %token T_if             "if"
 %token T_int            "int"
 %token T_list           "list"
+%token T_mod        "mod"
 %token T_new            "new"
+%token T_not          "not"
 %token T_nil            "nil"
 %token T_nil2           "nil?"
+%token T_or         "or"
 %token T_ref            "ref"
 %token T_return         "return"
 %token T_skip           "skip"
 %token T_tail           "tail"
+%token T_true           "true"
+%token T_le             "<="
+%token T_ge         ">="
+%token T_ne         "<>"
+%token T_assign     ":="
 
+%token<name> T_id      
+%token<num> T_const     
+%token<name> T_string    
+%token<num> T_singlechar  
 
-%left<op> 'or' 
-%left<op> 'and'
-%nonassoc<op> 'not'
-%nonassoc<op> '=' '<>' '<=' '>=' '<' '>'
-%right<op> '#'
-%left<op> '+' '-'
-%left<op> '*' '/' 'mod'
-%left<op> UMINUS UPLUS
+%type<name> Header
+%type<Stmt> Stmt
+%type<Stmt> Stmt_Body
+%type<Stmt> Stmt_Full
+%type<name> Type
+%type<Stmt> If_Clause
+%type<Stmt> For_Clause
+%type<Expr> Expr
+%type<Value> Value
+%type<Atom> Atom
+%type<Call> Call
 
-
-//types για μη τερματικά σύμβολα
-%type<ast> Call Stmt_Body Stmt_Elsif_Body
-%type<expr> Expr Atom
-%type<stmt> Stmt Simple
-%type<simple_list> Simple_List Simple_Comma
-%type<expr_list> Expr_Comma
-%type<var_list> Var_Comma
+%left "or" 
+%left "and"
+%nonassoc "not"
+%nonassoc '=' "<>" "<=" ">=" '<' '>'
+%right '#'
+%left '+' '-'
+%left '*' '/' "mod"
+%left UMINUS UPLUS
 
 
 %%
@@ -92,13 +114,13 @@ Program:
 ;
 
 Func_def:
-    "def" Header ":" Def_list  Stmt_Body "end"
+    "def" Header ':' Func_def_dec  Stmt_Body "end"
 ;
 
 Func_def_dec:
-    Func_def Def_list
-|   Func_decl Def_list 
-|   Var_def Def_list
+    Func_def Func_def_dec
+|   Func_Decl Func_def_dec 
+|   Var_Def Func_def_dec
 |   /*ε*/
 ;
 
@@ -122,8 +144,8 @@ Formal:
 
 
 Var_Comma:
-    /* e*/  { /*$$ = new VarList(); */}
-|   ',' T_id Var_Comma { /*$1->append($3); $$ = $1; */}
+    /* e*/  {}
+|   ',' T_id Var_Comma {}
 ;
 
 Type:
@@ -180,13 +202,13 @@ For_Clause: "for" Simple_List ';' Expr ';' Simple_List ':' Stmt_Body "end"
 ;
 
 Simple:
-    "skip"          { /* $$ = new Skip();  */}
-|   Atom ":=" Expr  { /* $$ = new Let($1,$3); */ }
-|   Call            { /* $$ = $1; */ }
+    "skip"          { }
+|   Atom ":=" Expr  { }
+|   Call            { }
 ;
 
 
-Simple_List: Simple  Simple_Comma    { /* $2->insert_front($1); $$ = $2; */ }
+Simple_List: Simple  Simple_Comma    { }
 ;
 
 
@@ -195,21 +217,21 @@ Simple_List: Simple  Simple_Comma    { /* $2->insert_front($1); $$ = $2; */ }
 Το SimpleList() κατασκευάζει μια κενή λίστα από Simples η οποία
 θα γίνει append. */
 Simple_Comma:
-    /*ε*/  { /* $$ = new SimpleList(); */ }
-|   ',' Simple Simple_Comma { /* 1->append($3); $$ = $1; */ }
+    /*ε*/  {}
+|   ',' Simple Simple_Comma {}
 ;
 
 Call:
-    T_id  '(' ')'                  { /* $$ = new FunctionCall($1); */}
-|   T_id  '('' ExprList ')'   { /* $4->insert_front($3); $$ = new FunctionCall($1, $4); */ }
+    T_id  '(' ')'                  { }
+|   T_id  '(' Expr_List ')' { }
 ;
 
-Expr_List: Expr  Expr_Comma    { /* $2->insert_front($1); $$ = $2; */ }
+Expr_List: Expr  Expr_Comma    { }
 ;
 
 Expr_Comma:
-    /*ε*/               { /* $$ = new ExprList(); */ }
-|   ',' Expr Expr_Comma { /* $1->append($3); $$ = $1; */ }
+    /*ε*/               { }
+|   ',' Expr Expr_Comma { }
 ;
 
 Atom:
@@ -228,8 +250,8 @@ Value:
         T_const        { $$ = new IntConst($1); }
     |   T_singlechar       { $$ = new CharConst($1); }
     |   '(' Expr ')'     { $$ = $2; }
-    |   '+' Expr    { $$ = new UnOp($1, $2); }
-    |   '-' Expr    { $$ = new UnOp($1, $2); }
+    |   '+' Expr   %prec UPLUS { $$ = new UnOp($1, $2); }
+    |   '-' Expr   %prec UMINUS { $$ = new UnOp($1, $2); }
     |   Expr '+' Expr    { $$ = new BinOp($1, $2, $3); }
     |   Expr '-' Expr    { $$ = new BinOp($1, $2, $3); }
     |   Expr '*' Expr    { $$ = new BinOp($1, $2, $3); }
