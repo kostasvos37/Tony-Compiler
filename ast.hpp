@@ -30,36 +30,111 @@ public:
   virtual void compile() const = 0;  
 };
 
-// Done
-class StmtBody: public AST {
+class Atom: public Expr { 
+};
+
+class RValue: public Expr {  
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+class FunctionCall: public Stmt, public Atom {
 public:
-  StmtBody(): stmts() {}
-  ~StmtBody() { for (Stmt *s : stmts) delete s; }
-  void append(Stmt* stmt) {
-    stmts.push_back(stmt);
-    return;
-  }
+  FunctionCall(std::string n): name(n) {}
+  FunctionCall(std::string n): name(n) {}
   virtual void printOn(std::ostream &out) const override {
-    out << "StmtBody(";
-    for (Stmt *s : stmts) {
-      out << *s << ", " ;
-    }
-    out << "endStmtBody)";
+    out << "Array (" << *atom << " " << *expr << ")\n";
   }
   virtual void compile() const override {
-    printf("Stmt body, check these out : \n");
-    for (Stmt *fwtakaros : stmts)
-      fwtakaros->compile();
+
+    printf("i am arraying huehue\n");
+    atom->compile();
+    expr->compile();
+
   }
-  
 private:
-  std::vector<Stmt*> stmts;
+  std::string name;
+  ExprList *params;
+};
+
+
+class ExprList {
+public:
+  ExprList(): expressions() {}
+  ~ExprList() { for (Expr *e : expressions) delete e; }
+
+  void append(Expr *e) { expressions.push_back(e); }
+  void insert_front(Expr *e) { expressions.insert(expressions.begin(), e);}
+
+  void printOn(std::ostream &out) {
+    out << "ExprList(";
+    bool first = true;
+    for (Expr *e : expressions) {
+      if (!first) out << ", ";
+      first = false;
+      out << *e;
+    }
+    out << ")\n";
+  }
+  void compile() {
+    printf("ExprList and these are my stitches: \n");
+    for (Expr *e : expressions)
+      e->compile();
+  }
+private:
+  std::vector<Expr*> expressions;
 };
 
 // Done
-class Id: public Expr {
+class Array: public Atom {
 public:
-  Id(char *v): var(std::string(v)) {}
+  Array(Atom *a, Expr *e): atom(a), expr(e) {}
+  virtual void printOn(std::ostream &out) const override {
+    out << "Array (" << *atom << " " << *expr << ")\n";
+  }
+  virtual void compile() const override {
+
+    printf("i am arraying huehue\n");
+    atom->compile();
+    expr->compile();
+
+  }
+private:
+  Atom *atom;
+  Expr *expr;
+};
+
+// Done
+class StringLiteral: public Atom {
+public:
+  StringLiteral(std::string str): strlit(str) {}
+  virtual void printOn(std::ostream &out) const override {
+    out << "String" << strlit << ")";
+  }
+  virtual void compile() const override {
+    /*Εδώ θα μπει ο ενδιάμεσος κώδικας μετά*/
+    printf("string_literal : %s\n", strlit);
+  }
+private:
+  std::string strlit;
+};
+
+
+// Done
+class Id: public Atom {
+public:
+  Id(std::string v): var(v) {}
   virtual void printOn(std::ostream &out) const override {
     out << "Id(" << var << ")";
   }
@@ -71,38 +146,7 @@ private:
 };
 
 // Done
-class Array: public Expr {
-public:
-  Array(char *t): typ(std::string(t)) {}
-  virtual void printOn(std::ostream &out) const override {
-    out << "Array " << typ << " " << *expr << "\n";
-  }
-  virtual void compile() const override {
-    expr->compile();
-    printf("i am arraying huehue\n");
-  }
-private:
-  std::string typ;
-  Expr *expr;
-};
-
-// Done
-class IntConst: public Expr {
-public:
-  IntConst(int n): num(n) {}
-  virtual void printOn(std::ostream &out) const override {
-    out << "Const(" << num << ")";
-  }
-  virtual void compile() const override {
-    /*Εδώ θα μπει ο ενδιάμεσος κώδικας μετά*/
-    printf("int_const == %d\n", num);
-  }
-private:
-  int num;
-};
-
-// Done
-class CharConst: public Expr {
+class CharConst: public RValue {
 public:
   CharConst(char c): char_const(c) {}
   virtual void printOn(std::ostream &out) const override {
@@ -110,45 +154,81 @@ public:
   }
   virtual void compile() const override {
     /*Εδώ θα μπει ο ενδιάμεσος κώδικας μετά*/
-    printf("string_literal == %c\n", char_const);
+    printf("char const : %c\n", char_const);
   }
 private:
   char char_const;
 };
 
 // Done
-class StringLiteral: public Expr {
+class IntConst: public RValue {
 public:
-  StringLiteral(char str[]): strlit(str) {}
+  IntConst(int n): num(n) {}
   virtual void printOn(std::ostream &out) const override {
-    out << "String" << " whateva " << ")";
+    out << "Const(" << num << ")";
   }
   virtual void compile() const override {
     /*Εδώ θα μπει ο ενδιάμεσος κώδικας μετά*/
-    printf("string_literal == %c\n", strlit[0]);
+    printf("int_const : %d\n", num);
   }
 private:
-  char *strlit;
+  int num;
 };
 
 // Done
-class Boolean: public Expr {
+class New: public RValue {
 public:
-  Boolean(bool b): boo(b) {} //wink wink pap
+  New(Type *t, Expr *right): typ(t), expr(right){}
+  ~New() {delete expr;}
+  virtual void printOn(std::ostream &out) const override {
+    out << "new (" << *typ << ", " << *expr << ")";
+  }
+  virtual void compile() const override {
+    printf("New \n");
+    typ->compile();
+    expr->compile();
+  }
+private:
+  Type *typ;
+  Expr *expr;
+};
+
+
+
+class Nil: public RValue {
+public:
+  Nil() {}
+  virtual void printOn(std::ostream &out) const override {
+    out << "Nil()";
+  }
+  virtual void compile() const override {
+    printf("Nil\n");
+  }
+};
+
+// Done
+class Boolean: public RValue {
+public:
+  Boolean(std::string b): boo(b) {} //wink wink pap
   virtual void printOn(std::ostream &out) const override {
     out << "Bool: " << boo << ")";
   }
   virtual void compile() const override {
-    printf("bool == %d\n", boo);
+    if (boo == "true")
+      printf("true\n");
+    else if (boo == "false")
+      printf("false\n");
+    else
+      printf("Wrong bool value dummy");
   }
 private:
-  bool boo;
+  std::string boo;
 };
 
 // Done
-class BinOp: public Expr {
+class BinOp: public RValue {
 public:
-  BinOp(Expr *l, char *o, Expr *r): left(l), op(std::string(o)), right(r) {}
+  BinOp(Expr *l, std::string o, Expr *r): left(l), op(o), right(r) {}
   ~BinOp() { delete left; delete right; }
   virtual void printOn(std::ostream &out) const override {
     out << op << "(" << *left << ", " << *right << ")";
@@ -195,12 +275,12 @@ private:
 };
 
 // Done
-class UnOp: public Expr {
+class UnOp: public RValue {
 public:
-  UnOp(char *o, Expr *r): op(std::string(o)), right(r) {}
+  UnOp(std::string(o), Expr *r): op(o), right(r) {}
   ~UnOp() { delete right; }
   virtual void printOn(std::ostream &out) const override {
-    out << op << " " << *right;
+    out << op << "( " << *right << ")";
   }
   virtual void compile() const override {
     right->compile();
@@ -224,22 +304,80 @@ private:
   Expr *right;
 };
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// Below here not done
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // Done
-class New: public Expr {
+class StmtBody: public AST {
 public:
-  New(char *t, Expr *right): typ(std::string(t)), expr(right){}
-  ~New() {delete expr;}
+  StmtBody(): stmts() {}
+  ~StmtBody() { for (Stmt *s : stmts) delete s; }
+  void append(Stmt* stmt) {
+    stmts.push_back(stmt);
+    return;
+  }
   virtual void printOn(std::ostream &out) const override {
-    out << typ;
+    out << "StmtBody(";
+    for (Stmt *s : stmts) {
+      out << *s << ", " ;
+    }
+    out << "endStmtBody)";
   }
   virtual void compile() const override {
-    expr->compile();
-    printf("New %s\n", typ.c_str());
+    printf("Stmt body, check these out : \n");
+    for (Stmt *fwtakaros : stmts)
+      fwtakaros->compile();
   }
+  
 private:
-  std::string typ;
-  Expr *expr;
+  std::vector<Stmt*> stmts;
 };
+
+
+
+
+
+
+
+
+
+
+
 
 // Done
 class Exit: public Stmt{
@@ -331,55 +469,10 @@ private:
   std::vector<Stmt*> simples; 
 };
 
-// Done
-class FunctionCall: public AST {
-public:
-  FunctionCall(char *n): name(std::string(n)), parameters() {}	
-  FunctionCall(char *n, std::vector<Expr*> param): name(std::string(n)), parameters(param) {}
-  ~FunctionCall() { for (Expr *e : parameters) delete e; }
-  virtual void printOn(std::ostream &out) const override {
-    out << "FunctionCall(";
-    for (Expr *e : parameters) {
-      out << *e << ", ";
-    }
-    out << ")";
-  }
-  
-  virtual void compile() const override {
-    printf("Function call and these are my bitches: \n");
-    for (Expr *e : parameters) e->compile();
-  }
-  private:	
-  std::string name;	
-  std::vector<Expr*> parameters;	
-};
+
 
 // Done
-class ExprList: public AST {
-public:
-  ExprList(): expressions() {}
-  ~ExprList() { for (Expr *e : expressions) delete e; }
-  void append(Expr *e) { expressions.push_back(e); }
-  void insert_front(Expr *e) { expressions.insert(expressions.begin(), e);}
 
-  virtual void printOn(std::ostream &out) const override {
-    out << "ExprList(";
-    bool first = true;
-    for (Expr *e : expressions) {
-      if (!first) out << ", ";
-      first = false;
-      out << *e;
-    }
-    out << ")";
-  }
-  virtual void compile() const override {
-    printf("ExprList and these are my stitches: \n");
-    for (Expr *e : expressions)
-      e->compile();
-  }
-private:
-  std::vector<Expr*> expressions;
-};
 
 // Done
 class VarList: public AST {
@@ -527,31 +620,22 @@ private:
 };
 
 
-inline void prologue() {
-  printf("\
-.text\n\
-.global _start\n\
-\n\
-_start:\n\
-  movl $var, %%edi\n\
-\n");
-}
 
-inline void epilogue() {
-  printf("\
-\n\
-  movl $0, %%ebx\n\
-  movl $1, %%eax\n\
-  int $0x80\n\
-\n\
-.data\n\
-var:\n\
-.rept 26\n\
-.long 0\n\
-.endr\n\
-NL:\n\
-.asciz \"\\n\"\n\
-");
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 #endif

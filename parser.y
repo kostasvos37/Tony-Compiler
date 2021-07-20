@@ -2,7 +2,7 @@
 #include <cstdio>
 #include <string.h>
 #include "lexer.hpp"
-#include "ast.hpp"
+//#include "ast.hpp"
 
 %}
 
@@ -33,7 +33,7 @@
     } Expr;
     struct valu {
         int temp;
-    } Value;
+    } RValue;
     struct stmt {
         int temp;
     } Stmt;
@@ -89,7 +89,7 @@
 %type<Stmt> If_Clause
 %type<Stmt> For_Clause
 %type<Expr> Expr
-%type<Value> Value
+%type<RValue> RValue
 %type<Atom> Atom
 %type<Call> Call
 
@@ -110,11 +110,12 @@
 ==============================================*/
 
 Program:
-    Func_def
+    {cout << "Program { "; identcounter++;} Func_def {cout << " }";}
 ;
 
 Func_def:
-    "def" Header ':' Func_def_dec  Stmt_Body "end"
+    {cout << "Function { ";}
+    "def" Header ':' Func_def_dec  Stmt_Body "end" {cout << " }";}
 ;
 
 Func_def_dec:
@@ -125,42 +126,42 @@ Func_def_dec:
 ;
 
 Header:
-    Type T_id '('')'
-|   Type T_id '(' Formal Par ')'
-|   T_id '('')'
-|   T_id '(' Formal Par ')'
+    {cout << "Header { ";} Type T_id '(' ')' {cout << " }";}
+|   {cout << "Header { ";} Type T_id '(' Formal Par ')' {cout << " }";}
+|   {cout << "Header { ";} T_id '('')' {cout << "}";}
+|   {cout << "Header { ";} T_id '(' Formal Par ')' {cout << " }";}
 ;
 
 
 Par:
-|   ';' Formal Par;
+|   ';' Formal Par {cout << ", Param";}
 |   /*e*/
 ;
 
 Formal:
-    "ref" Type T_id Var_Comma
-|   Type T_id Var_Comma
+    "ref" Type T_id Var_Comma {cout << "Ref Param";}
+|   Type T_id Var_Comma {cout << "Param";}
 ;
 
 
 Var_Comma:
     /* e*/  {}
-|   ',' T_id Var_Comma {}
+|   ',' T_id Var_Comma {} {cout << ", Variable"}
 ;
 
 Type:
-    "int" 
-|   "char" 
-|   "bool" 
-|   Type '[' ']' 
-|   "list" '[' Type ']'
+    "int" {cout << "Int-Type ";}
+|   "char" {cout << "Char-Type ";}
+|   "bool" {cout << "Bool-Type ";}
+|   Type '[' ']' {cout << "Array-Type ";}
+|   "list" '[' Type ']' {cout << "List-Type ";}
 ;
 
 Func_Decl:
-    "decl" Header
+    {cout << "Function-Declaration {";} "decl" Header {cout << " }";}
 ;
 
-Var_Def:  Type T_id Var_Comma 
+Var_Def: {cout <<  "Variable";} Type T_id Var_Comma 
 
 /* 
 Stmt:
@@ -173,37 +174,37 @@ Stmt:
 ; */
 
 Stmt:
-    Simple  
-|   "exit"  
-|   "return" Expr   
-|   If_Clause
-|   For_Clause
+    {cout << "{Simple ";} Simple {cout << "} ";}  
+|   "exit"  {cout << "Exit ";}
+|   {cout << "Return ";} "return" Expr   
+|   {cout << "{IfClause {";} If_Clause {cout << "} ";}
+|   {cout << "{ForClause {";} For_Clause {cout << "} ";}
 ;
 
-Stmt_Body:  Stmt    { $$ = new StmtBody(); } Stmt_Full
+Stmt_Body: {cout << "StmtBody { ";} Stmt {cout <<"Stmt ";} Stmt_Full {cout << "} ";}
 ;
 
-Stmt_Full:   Stmt Stmt_Full   { $1->append($2); $$ = $1 }
+Stmt_Full:   Stmt Stmt_Full   {cout <<", Stmt"; }
 | /*e*/
 ; 
 If_Clause   :
     "if" Expr ':' Elsif_Clause Else_Clause "end";
 
 
-Elsif_Clause : "elsif" Expr ':' Stmt_Body Elsif_Clause
+Elsif_Clause : {cout << "ElseifClause{ ";} "elsif" Expr ':' Stmt_Body Elsif_Clause
 | /*e*/
 ;
 
-Else_Clause: "else" ':' Stmt_Body
+Else_Clause: {cout << "{ElseClause{} ";} "else" ':' Stmt_Body {cout << "} ";}
 | /*e*/
 ;
 
-For_Clause: "for" Simple_List ';' Expr ';' Simple_List ':' Stmt_Body "end"
+For_Clause: {cout << "{ForClause{ ";} "for" Simple_List ';' Expr ';' Simple_List ':' Stmt_Body "end"{cout << "} ";}
 ;
 
 Simple:
-    "skip"          { }
-|   Atom ":=" Expr  { }
+    "skip"          {cout << "Skip"; }
+|   {cout << "{Assign{ "; }Atom ":=" Expr {cout << "}"; }  
 |   Call            { }
 ;
 
@@ -218,66 +219,66 @@ Simple_List: Simple  Simple_Comma    { }
 θα γίνει append. */
 Simple_Comma:
     /*ε*/  {}
-|   ',' Simple Simple_Comma {}
+|  {cout << ","} ',' Simple Simple_Comma 
 ;
 
 Call:
-    T_id  '(' ')'                  { }
-|   T_id  '(' Expr_List ')' { }
+    {cout << "FunctionCall{ ";} T_id  '(' ')'                  {$$ = new FunctionCall()}
+|   {cout << "FunctionCall{ ";} T_id  '(' Expr_List ')' { }    {cout << "} ";}
 ;
 
-Expr_List: Expr  Expr_Comma    { }
+Expr_List: Expr  Expr_Comma    { $2->append($1); $$ = $2;}
 ;
 
 Expr_Comma:
-    /*ε*/               { }
-|   ',' Expr Expr_Comma { }
+    /*ε*/               { $$ = new ExprList();}
+|   ',' Expr Expr_Comma { $3->append($2); $$ = $3;}
 ;
 
 Atom:
-    T_id                 { $$ = new Id($1); }
-|   T_string     { $$ = new StringLiteral($1); }
-|   Atom '[' Expr ']' { $$ = new Array($1, $3); }
-|   Call               { $$ = $1; } 
+    T_id         {$$ = new Id(std::string($1));  }
+|   T_string     {$$ = new StringLiteral(std::string($1)); }
+|   Atom '[' Expr ']'   {$$ = new Array($1, $3);}
+|   Call                {$$ = $1;}
 ;
 
 Expr:
-    Atom             { $$ = $1; }
-|   Value
+    Atom      {$$ = $1;}       
+|   RValue     {$$ = $1;} 
 ;
 
-Value:
+RValue:
         T_const        { $$ = new IntConst($1); }
-    |   T_singlechar       { $$ = new CharConst($1); }
-    |   '(' Expr ')'     { $$ = $2; }
-    |   '+' Expr   %prec UPLUS { $$ = new UnOp($1, $2); }
-    |   '-' Expr   %prec UMINUS { $$ = new UnOp($1, $2); }
-    |   Expr '+' Expr    { $$ = new BinOp($1, $2, $3); }
-    |   Expr '-' Expr    { $$ = new BinOp($1, $2, $3); }
-    |   Expr '*' Expr    { $$ = new BinOp($1, $2, $3); }
-    |   Expr '/' Expr    { $$ = new BinOp($1, $2, $3); }
-    |   Expr "mod" Expr  { $$ = new BinOp($1, $2, $3); }
-    |   Expr '=' Expr    { $$ = new BinOp($1, $2, $3); }
-    |   Expr "<>" Expr   { $$ = new BinOp($1, $2, $3); }
-    |   Expr '<' Expr    { $$ = new BinOp($1, $2, $3); }
-    |   Expr '>' Expr    { $$ = new BinOp($1, $2, $3); }
-    |   Expr "<=" Expr   { $$ = new BinOp($1, $2, $3); }
-    |   Expr ">=" Expr   { $$ = new BinOp($1, $2, $3); }
-    |   "not" Expr              { $$ = new UnOp($1, $2); }
-    |   Expr "and" Expr  { $$ = new BinOp($1, $2, $3); }
-    |   Expr "or" Expr   { $$ = new BinOp($1, $2, $3); }
-    |   "true"         { $$ = new Boolean($1); }
-    |   "false"            { $$ = new Boolean($1); }
-    |   "new" Type '[' Expr ']' { $$ = new New($2, $4); }
-    |   Expr '#' Expr    { $$ = new BinOp($1, $2, $3); }
-    |   "nil" {}
-    |   "nil?" '(' Expr ')'     { $$ = new UnOp($1, $3); }
-    |   "head" '(' Expr ')'     { $$ = new UnOp($1, $3); }
-    |   "tail" '(' Expr ')'     { $$ = new UnOp($1, $3); }
+    |   T_singlechar   { $$ = new CharConst($1); }
+    |   '(' Expr ')'     {$$ = $2;}
+    |   '+' Expr   %prec UPLUS  { $$ = new UnOp(std::string("+"), $2);  }
+    |   '-' Expr   %prec UMINUS { $$ = new UnOp(std::string("-"), $2); }
+    |   "nil?" '(' Expr ')'     {$$ = new UnOp(std::string("nil?"), $3); }
+    |   "head" '(' Expr ')'     {$$ = new UnOp(std::string("head"), $3); }
+    |   "tail" '(' Expr ')'     {$$ = new UnOp(std::string("tail"), $3); }
+    |   "not" Expr              {$$ = new UnOp($1, std::string("not"), $2); }
+    |   Expr '+' Expr    {$$ = new BinOp($1, std::string("+"), $3); }
+    |   Expr '-' Expr    {$$ = new BinOp($1, std::string("-"), $3);  }
+    |   Expr '*' Expr    {$$ = new BinOp($1, std::string("*"), $3); }
+    |   Expr '/' Expr    {$$ = new BinOp($1, std::string("/"), $3);  }
+    |   Expr "mod" Expr  {$$ = new BinOp($1, std::string("mod"), $3);  }
+    |   Expr '=' Expr    {$$ = new BinOp($1, std::string("="), $3);  }
+    |   Expr "<>" Expr   {$$ = new BinOp($1, std::string("<>"), $3);  }
+    |   Expr '<' Expr    {$$ = new BinOp($1, std::string("<"), $3);  }
+    |   Expr '>' Expr    {$$ = new BinOp($1, std::string(">"), $3); }
+    |   Expr "<=" Expr   {$$ = new BinOp($1, std::string("<="), $3);  }
+    |   Expr ">=" Expr   {$$ = new BinOp($1, std::string(">="), $3);  }
+    |   Expr "and" Expr  {$$ = new BinOp($1, std::string("and"), $3);  }
+    |   Expr "or" Expr   {$$ = new BinOp($1, std::string("or"), $3); }
+    |   Expr '#' Expr    {$$ = new BinOp($1, std::string("#"), $3);  }
+    |   "true"           {$$ = new Boolean(std::string("true"));}
+    |   "false"          {$$ = new Boolean(std::string("false"));}
+    |   "new" Type '[' Expr ']' {$$ = new New($2, $4);}
+    |   "nil"            {$$ = new Nil();}
     ;
 
 %%
 
 int main(){
-  return 0;
+  int result = yyparse();
 }
