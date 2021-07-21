@@ -110,46 +110,48 @@
 ==============================================*/
 
 Program:
-    {cout << "Program { "; identcounter++;} Func_def {cout << " }";}
+    Func_def 
 ;
 
 Func_def:
-    {cout << "Function { ";}
-    "def" Header ':' Func_def_dec  Stmt_Body "end" {cout << " }";}
+    "def" Header ':' Func_def_dec  Stmt_Body "end"
 ;
 
 Func_def_dec:
     Func_def Func_def_dec
 |   Func_Decl Func_def_dec 
 |   Var_Def Func_def_dec
-|   /*ε*/
+|   /*ε*/ 
 ;
 
 Header:
-    {cout << "Header { ";} Type T_id '(' ')' {cout << " }";}
-|   {cout << "Header { ";} Type T_id '(' Formal Par ')' {cout << " }";}
-|   {cout << "Header { ";} T_id '('')' {cout << "}";}
-|   {cout << "Header { ";} T_id '(' Formal Par ')' {cout << " }";}
+    Type T_id '(' ')'               {$$ = new Header($1, $2, (FormalList *) NULL);}
+|   Type T_id '(' Formal Par ')'    {$5->append($4); $$ = new Header($1, $2, $5);}
+|   T_id '('')'                     {$$ = new Header((Type *) NULL, $1, (FormalList *) NULL);}
+|   T_id '(' Formal Par ')'         {$4->append($3); $$ = new Header((Type *) NULL, $1, $4);}
 ;
+
 
 Func_Decl:
     "decl" Header 
 ;
 
 Par:
-|   ';' Formal Par {cout << ", Param";}
-|   /*e*/
+|   ';' Formal Par {$3->append($2); $$ = $3;}
+|   /*e*/ {$$ = new FormalList();}
 ;
 
 Formal:
-    "ref" Type T_id Var_Comma {cout << "Ref Param";}
-|   Type T_id Var_Comma {cout << "Param";}
+    "ref" Var_Def {$$ = new Formal($1, true);}
+|   Var_Def {$$ = new Formal($1, false);}
 ;
 
 
+Var_Def: Type T_id Var_Comma {$3->append($2); $3->set_type($1); $$ = $3;}
+
 Var_Comma:
-    /* e*/  {}
-|   ',' T_id Var_Comma {} {cout << ", Variable"}
+    /* e*/  {$$ = new VarList()}
+|   ',' T_id Var_Comma {} {$3->append($2); $$ = $3;}
 ;
 
 Type:
@@ -161,7 +163,7 @@ Type:
 ;
 
 
-Var_Def: Type T_id Var_Comma 
+
 
 Stmt:
     Simple {$$ = $1}  

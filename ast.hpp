@@ -20,14 +20,11 @@ inline std::ostream& operator<< (std::ostream &out, const AST &t) {
   return out;
 }
 
-class Expr: public AST {
-public:
-  virtual void compile() const = 0;  
+// Virtual to avoid "diamond of death"
+class Expr: virtual public AST {
 };
 
-class Stmt: public AST {
-public:
-  virtual void compile() const = 0;  
+class Stmt: virtual public AST {
 };
 
 class Atom: public Expr { 
@@ -66,19 +63,19 @@ public:
     printf("Type (");
 
     if(type=="int"){
-      printf("int");
+      printf("int ");
     }
-    else if(type=="char "){
-      printf("char");
+    else if(type=="char"){
+      printf("char ");
     }
-    else if(type=="bool "){
-      printf("bool");
+    else if(type=="bool"){
+      printf("bool ");
     }
-    else if(type=="array "){
-      printf("array");
+    else if(type=="array"){
+      printf("array ");
     }
-    else if(type=="list "){
-      printf("list");
+    else if(type=="list"){
+      printf("list ");
     } else{
       printf("invalid type ");
     }
@@ -101,7 +98,7 @@ public:
     out << "Id(" << var << ")";
   }
   virtual void compile() const override {
-    printf("i smell a variable\n");    
+    printf("i smell a variable : %s\n", var.c_str());    
   }
 private:
   std::string var;
@@ -307,7 +304,6 @@ private:
 
 
 // Below here 'constructed' stuff
-
 
 class VarList: public AST {
 public:
@@ -570,7 +566,8 @@ public:
   }
   virtual void compile() const override {
     printf("Else \n");
-    else_stmt[0]->compile();
+    if(!else_stmt.empty()){
+      else_stmt[0]->compile();}
   }
 
 private:
@@ -580,8 +577,8 @@ private:
 class If: public Stmt {
 public:
   If(Expr *e, StmtBody *b, Elsif * ei, Else *el){
-    conditions[0] = e;
-    statements[0] = b;
+    conditions.push_back(e);
+    statements.push_back(b);
     
     std::vector<Expr *> elsif_conds = ei->get_conds();
     std::vector<StmtBody *> elsif_stmt_bodies = ei->get_stmt_bodies();
