@@ -132,6 +132,9 @@ Header:
 |   {cout << "Header { ";} T_id '(' Formal Par ')' {cout << " }";}
 ;
 
+Func_Decl:
+    "decl" Header 
+;
 
 Par:
 |   ';' Formal Par {cout << ", Param";}
@@ -150,42 +153,29 @@ Var_Comma:
 ;
 
 Type:
-    "int" {cout << "Int-Type ";}
-|   "char" {cout << "Char-Type ";}
-|   "bool" {cout << "Bool-Type ";}
-|   Type '[' ']' {cout << "Array-Type ";}
-|   "list" '[' Type ']' {cout << "List-Type ";}
+    "int" {}
+|   "char" {}
+|   "bool" {}
+|   Type '[' ']' {}
+|   "list" '[' Type ']' {}
 ;
 
-Func_Decl:
-    {cout << "Function-Declaration {";} "decl" Header {cout << " }";}
-;
 
-Var_Def: {cout <<  "Variable";} Type T_id Var_Comma 
-
-/* 
-Stmt:
-    Simple  { $$ = $1; }
-|   "exit"  { $$ = new Exit(); }
-|   "return" Expr   { $$ = new Return($2); }
-|   "if" Expr ":" Stmt_Body Stmt_Elsif_Body "end"   { $$ = new If($2, $4, $5); }
-|   "if" Expr ":" Stmt_Body Stmt_Elsif_Body "else" ":" Stmt_Body "end"  { $$ = new If($2, $4, $5, $8); }
-|   "for" Simple_List ";" Expr ";" Simple_List ":" Stmt_Body "end"  { $$ = new For($2, $4, $6, $8); }
-; */
+Var_Def: Type T_id Var_Comma 
 
 Stmt:
-    {cout << "{Simple ";} Simple {cout << "} ";}  
-|   "exit"  {cout << "Exit ";}
-|   {cout << "Return ";} "return" Expr   
-|   {cout << "{IfClause {";} If_Clause {cout << "} ";}
-|   {cout << "{ForClause {";} For_Clause {cout << "} ";}
+    Simple {$$ = $1}  
+|   "exit"  {$$ = new Exit();}
+|   "return" Expr  {$$ = new Return($2);}
+|   If_Clause {$$=$1;}
+|   For_Clause {$$=$1;}
 ;
 
-Stmt_Body: {cout << "StmtBody { ";} Stmt {cout <<"Stmt ";} Stmt_Full {cout << "} ";}
+Stmt_Body: Stmt Stmt_Full {$2->append($1); $$ = $2;}
 ;
 
-Stmt_Full:   Stmt Stmt_Full   {cout <<", Stmt"; }
-| /*e*/
+Stmt_Full:   Stmt Stmt_Full   {$2->append($1); $$ = $2; }
+| /*e*/ {$$ = new StmtBody();}
 ; 
 
 

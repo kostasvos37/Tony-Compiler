@@ -49,7 +49,59 @@ class Simple: public Stmt {
 
 
 
+// Done
+class Return: public Stmt{
+public:
+  Return(Expr* e): ret_expr(e) {}
+private: 
+virtual void printOn(std::ostream &out) const override {
+    out << "Return( " << *ret_expr << ")";
+  }
+  virtual void compile() const override {
+    printf("Return(), expression = \n");
+    ret_expr->compile();
+  }
+  Expr* ret_expr;
+};
 
+
+// Done
+class Exit: public Stmt{
+public:
+  Exit() {}
+  virtual void printOn(std::ostream &out) const override {
+    out << "exit\n";
+  }
+  virtual void compile() const override {
+    printf("Exit\n");
+  }
+};
+
+// Done
+class StmtBody: public AST {
+public:
+  StmtBody(): stmts() {}
+  ~StmtBody() { for (Stmt *s : stmts) delete s; }
+  void append(Stmt* stmt) {
+    stmts.push_back(stmt);
+    return;
+  }
+  virtual void printOn(std::ostream &out) const override {
+    out << "StmtBody(";
+    for (Stmt *s : stmts) {
+      out << *s << "\n " ;
+    }
+    out << "endStmtBody\n)";
+  }
+  virtual void compile() const override {
+    printf("Stmt body, check these out : \n");
+    for (Stmt *fwtakaros : stmts)
+      fwtakaros->compile();
+  }
+  
+private:
+  std::vector<Stmt*> stmts;
+};
 
 class If: public Stmt {
 public:
@@ -543,93 +595,6 @@ private:
 
 // Below here not done
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// Done
-class StmtBody: public AST {
-public:
-  StmtBody(): stmts() {}
-  ~StmtBody() { for (Stmt *s : stmts) delete s; }
-  void append(Stmt* stmt) {
-    stmts.push_back(stmt);
-    return;
-  }
-  virtual void printOn(std::ostream &out) const override {
-    out << "StmtBody(";
-    for (Stmt *s : stmts) {
-      out << *s << ", " ;
-    }
-    out << "endStmtBody)";
-  }
-  virtual void compile() const override {
-    printf("Stmt body, check these out : \n");
-    for (Stmt *fwtakaros : stmts)
-      fwtakaros->compile();
-  }
-  
-private:
-  std::vector<Stmt*> stmts;
-};
-
-
-
-
-
-
-
-
-
-
-
-
-// Done
-class Exit: public Stmt{
-public:
-  Exit() {}
-  virtual void printOn(std::ostream &out) const override {
-    out << "Exit() ";
-  }
-  virtual void compile() const override {
-    printf("exit\n");
-  }
-};
-
-// Done
-class Return: public Stmt{
-public:
-  Return(Expr* e): ret_expr(e) {}
-private: 
-virtual void printOn(std::ostream &out) const override {
-    out << "Return( " << *ret_expr << ")";
-  }
-  virtual void compile() const override {
-    printf("Return(), expression = \n");
-    ret_expr->compile();
-  }
-  Expr* ret_expr;
-};
-
-
-
 // Done
 class Let: public Stmt {
 public:
@@ -653,7 +618,6 @@ private:
 
 
 
-// Done
 
 
 // Done
