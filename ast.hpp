@@ -36,6 +36,8 @@ class Atom: public Expr {
 class RValue: public Expr {  
 };
 
+class Simple: public Stmt {  
+};
 
 
 
@@ -49,27 +51,244 @@ class RValue: public Expr {
 
 
 
-class FunctionCall: public Stmt, public Atom {
+class If: public Stmt {
 public:
-  FunctionCall(std::string n): name(n) {}
-  FunctionCall(std::string n): name(n) {}
+  If(Expr *e, StmtBody *b, Elsif * ei, Else *el){
+    conditions[0] = e;
+    statements[0] = b;
+    
+    std::vector<Expr *> elsif_conds = ei->get_conds();
+    std::vector<StmtBody *> elsif_stmt_bodies = ei->get_stmt_bodies();
+    for(int i=0; i<elsif_conds.size();i++){
+      conditions.push_back(elsif_conds[i]);
+      statements.push_back(elsif_stmt_bodies[i]);
+    }
+
+    if(!el->isEmpty()){
+      conditions.push_back(new Boolean("true"));
+      statements.push_back(el->get_stmt());
+    }
+  }
+  ~If() {
+    for (Expr* e: conditions) delete e;
+    for (StmtBody* s: statements) delete s; 
+  }
+
+    virtual void printOn(std::ostream &out) const override {
+    out << "If(";
+    
+    for (int i=0; i< conditions.size();i++) {
+      out << *conditions[i];
+      out << *statements[i];
+    }
+    out << ")\n";
+  }
+  virtual void compile() const override {
+    printf("If statement and these are my iffies: \n");
+    for (int i=0; i<conditions.size();i++){
+      conditions[i]->compile();
+      statements[i]->compile();
+    }
+  }
+private:
+  std::vector<Expr *> conditions;
+  std::vector<StmtBody *> statements;
+};
+
+class Elsif: public Stmt {
+public:
+  Elsif() {}
+  ~Elsif() {
+    for (Expr* e: elsif_conds) delete e;
+    for (StmtBody* s: elsif_stmt_bodies) delete s;
+  }
+  std::vector<Expr *> get_conds() {
+    return elsif_conds;
+  }
+  std::vector<StmtBody *> get_stmt_bodies() {
+    return elsif_stmt_bodies;
+  }
+
+  bool isEmpty(){
+    return elsif_conds.empty();
+  }
+  void append(Expr* e, StmtBody* s) {
+    elsif_conds.push_back(e);
+    elsif_stmt_bodies.push_back(s);
+  }
+
   virtual void printOn(std::ostream &out) const override {
-    out << "Array (" << *atom << " " << *expr << ")\n";
+    
+    if(!elsif_conds.empty()){
+      out << "ElseIf ( ";
+      for(int i=0; i<elsif_stmt_bodies.size(); i++){
+        out << "( " << *elsif_conds[i] << ", " << *elsif_stmt_bodies[i] << ")";
+      }
+      out << ")\n";
+    }
+  }
+  virtual void compile() const override {
+    printf("ElseIf \n");
+    for(int i=0; i<elsif_stmt_bodies.size(); i++){
+        elsif_conds[i]->compile();
+        elsif_stmt_bodies[i]->compile();
+    }
+  }
+
+private:
+  std::vector<Expr *> elsif_conds;
+  std::vector<StmtBody *> elsif_stmt_bodies;
+};
+
+class Else: public Stmt {
+public:
+  Else() {}
+  Else(StmtBody *s){else_stmt.push_back(s);}
+  ~Else() {
+    if (else_stmt.empty()){
+      delete else_stmt[0];
+    }
+  }
+  StmtBody * get_stmt() {
+    return else_stmt[0]; 
+  }
+
+  bool isEmpty(){
+    return else_stmt.empty();
+  }
+
+  virtual void printOn(std::ostream &out) const override {
+    
+    if(!else_stmt.empty()){
+      out << "Else (" << *else_stmt[0] << ")\n";
+    }
+  }
+  virtual void compile() const override {
+    printf("Else \n");
+    else_stmt[0]->compile();
+  }
+
+private:
+  std::vector<StmtBody *> else_stmt;
+};
+
+class For: public Stmt {
+public:
+  For(SimpleList *sl1, Expr *e, SimpleList *sl2, StmtBody *sb):
+    simple_list1(sl1), expr(e), simple_list2(sl2), stmt_body(sb)  {}
+  ~For() {
+    delete simple_list1;
+    delete expr;
+    delete simple_list2;
+    delete stmt_body; }
+  virtual void printOn(std::ostream &out) const override {
+    out << "For(" << *simple_list1 << ", " << *expr << "," << *simple_list2 << ", " << *stmt_body << ")\n";
+  }
+  virtual void compile() const override {
+    printf("For(");
+    simple_list1->compile();
+    expr->compile();
+    simple_list2->compile();
+    stmt_body->compile();
+    printf(")\n");
+  }
+private:
+  SimpleList *simple_list1;
+  Expr *expr;
+  SimpleList *simple_list2;
+  StmtBody *stmt_body;
+};
+
+// Done
+class SimpleList: public AST {
+public:
+  SimpleList(): simples() {}
+  ~SimpleList() { for (Simple *s : simples) delete s; }
+
+  void append(Simple *s) { simples.push_back(s); }
+  void insert_front(Simple *s) { simples.insert(simples.begin(), s);}
+
+  virtual void printOn(std::ostream &out) const override {
+    out << "SimplesList(";
+    bool first = true;
+    for (Simple *s : simples) {
+      if (!first) out << ", ";
+      first = false;
+      out << *s;
+    }
+    out << ")\n";
+  }
+  virtual void compile() const override {
+    printf("SimpleList and these are my stitches: \n");
+    for (Simple *s : simples)
+      s->compile();
+  }
+  std::vector<Simple *> get_simples_list(){
+    return simples;
+  }
+private:
+  std::vector<Simple *> simples;
+};
+
+// Done
+class Assign: public Simple{
+public:
+  Assign(Atom *a, Expr *e): atom(a), expr(e) {}
+  virtual void printOn(std::ostream &out) const override {
+    out << "assign" << *atom << "," << *expr << "\n";
+  }
+  virtual void compile() const override {
+    printf("Assign\n");
+    atom->compile();
+    expr->compile();
+  }
+private:
+  Expr *expr;
+  Atom *atom;
+};
+
+// Done
+class Skip: public Simple{
+public:
+  Skip() {}
+  virtual void printOn(std::ostream &out) const override {
+    out << "skip\n";
+  }
+  virtual void compile() const override {
+    printf("Skip\n");
+  }
+};
+
+//TODO : Fix weird type issue on printOn
+class FunctionCall: public Simple, public Atom {
+public:
+  FunctionCall(Id *n): name(n), hasParams(false) {}
+  FunctionCall(Id *n, ExprList *el): name(n), params(el), hasParams(true) {}
+  //~Call(){}
+  virtual void printOn(std::ostream &out) const override {
+    if(!hasParams)
+      out << "Function call (" << *name << ")\n";
+    else
+      out << "Function call (" << *name << "," << *params << ")\n";
   }
   virtual void compile() const override {
 
-    printf("i am arraying huehue\n");
-    atom->compile();
-    expr->compile();
-
+    printf("Function Call(\n");
+    name->compile();
+    if(hasParams){
+      printf(", ");
+      params->compile();
+    }
+    printf(")\n");
   }
+bool hasParams;
 private:
-  std::string name;
+  Id *name;
   ExprList *params;
 };
 
 
-class ExprList {
+class ExprList: public AST {
 public:
   ExprList(): expressions() {}
   ~ExprList() { for (Expr *e : expressions) delete e; }
@@ -77,7 +296,7 @@ public:
   void append(Expr *e) { expressions.push_back(e); }
   void insert_front(Expr *e) { expressions.insert(expressions.begin(), e);}
 
-  void printOn(std::ostream &out) {
+  virtual void printOn(std::ostream &out) const override {
     out << "ExprList(";
     bool first = true;
     for (Expr *e : expressions) {
@@ -87,10 +306,13 @@ public:
     }
     out << ")\n";
   }
-  void compile() {
+  virtual void compile() const override {
     printf("ExprList and these are my stitches: \n");
     for (Expr *e : expressions)
       e->compile();
+  }
+  std::vector<Expr*> get_expr_list(){
+    return expressions;
   }
 private:
   std::vector<Expr*> expressions;
@@ -406,17 +628,7 @@ virtual void printOn(std::ostream &out) const override {
   Expr* ret_expr;
 };
 
-// Done
-class Skip: public Stmt{
-public:
-  Skip() {}
-  virtual void printOn(std::ostream &out) const override {
-    out << "skip\n";
-  }
-  virtual void compile() const override {
-    printf("i just skipped\n");
-  }
-};
+
 
 // Done
 class Let: public Stmt {
@@ -438,36 +650,6 @@ private:
   Expr *expr;
 };
 
-// Done
-class SimpleList: public AST {
-public:
-  SimpleList(): simples() {}
-  SimpleList(Stmt *simp) {
-    std::vector<Stmt*> temp;
-    simples = temp;
-    simples.push_back(simp); 
-  }  
-  ~SimpleList() { for (Stmt *e : simples) delete e; }
-  void append(Stmt *e) { simples.push_back(e); }
-  void insert_front(Stmt *e) { simples.insert(simples.begin(), e); }
-  virtual void printOn(std::ostream &out) const override {
-    out << "SimpleList(";
-    bool first = true;
-    for (Stmt *e : simples) {
-      if (!first) out << ", ";
-      first = false;
-      out << *e;
-    }
-    out << ")";
-  }
-  virtual void compile() const override {
-    printf("SimpleList and these are my stitches: \n");
-    for (Stmt *e : simples)
-      e->compile();
-  }
-private:
-  std::vector<Stmt*> simples; 
-};
 
 
 
@@ -527,97 +709,11 @@ private:
 };
 
 // TODO : Dex xerw ti paizei
-class If: public Stmt {
-public:
-  If(Expr *c, StmtBody *s, Elsif *e, Stmt *else_s = nullptr) {
-      main_cond = c;
-      main_stmt_body = s;
-      elsif_conds = e->get_conds();
-      elsif_stmt_bodies = e->get_stmt_bodies();
-      else_stmt = else_s;
-    }
-  ~If() {
-    delete main_cond;
-    delete main_stmt_body;
-    for (Expr* e: elsif_conds) delete e;
-    for (StmtBody* s: elsif_stmt_bodies) delete s;
-    delete else_stmt; }
-  void append_elsif(Elsif* elsif) {
-    elsif_conds = elsif->get_conds();
-    elsif_stmt_bodies = elsif->get_stmt_bodies();
-    return;
-  }
-  virtual void printOn(std::ostream &out) const override {
-    out << "If(" << *cond << ", " << *stmt1;
-    if (stmt2 != nullptr) out << ", " << *stmt2;
-    out << ")";
-  }
-private:
-  Expr *main_cond;
-  StmtBody *main_stmt_body;
-  std::vector<Expr *> elsif_conds;
-  std::vector<StmtBody *> elsif_stmt_bodies;
-  Stmt *else_stmt;
-};
 
 
-// TODO : Ta idia
-class Elsif: public Stmt {
-public:
-  Elsif(): elsif_conds(), elsif_stmt_bodies() {}
-  ~Elsif() {
-    for (Expr* e: elsif_conds) delete e;
-    for (StmtBody* s: elsif_stmt_bodies) delete s;
-  }
-  std::vector<Expr *> get_conds() {
-    return elsif_conds;
-  }
-  std::vector<StmtBody *> get_stmt_bodies() {
-    return elsif_stmt_bodies;
-  }
-  void append(Expr* e, StmtBody* s) {
-    elsif_conds.push_back(e);
-    elsif_stmt_bodies.push_back(s);
-  }
-private:
-  std::vector<Expr *> elsif_conds;
-  std::vector<StmtBody *> elsif_stmt_bodies;
-};
 
 // TODO : Kati exeis kanei de to sbhnw
-class For: public Stmt {
-public:
-  For(SimpleList *sl1, Expr *e, SimpleList *sl2, StmtBody *sb):
-    simple_list1(sl1), expr(e), simple_list2(sl2), stmt_body(sb)  {}
-  ~For() {
-    delete simple_list1;
-    delete expr;
-    delete simple_list2;
-    delete stmt_body; }
-  virtual void printOn(std::ostream &out) const override {
-    out << "For(" << *expr << ", " << *stmt << ")";
-  }
-  virtual void compile() const override {
-    static int counter = 0;
-    expr->compile();
-    int l_loop = counter++;
-    printf("Lfor%d:\n", l_loop);
-    printf("  popl %%eax\n");
-    printf("  cmpl $0, %%eax\n");
-    int l_end = counter++;
-    printf("  jle Lfor%d\n", l_end);
-    printf("  decl %%eax\n");
-    printf("  pushl %%eax\n");
-    stmt->compile();
-    printf("  jmp Lfor%d\n", l_loop);
-    printf("Lfor%d:\n", l_end);
-  }
-private:
-  SimpleList *simple_list1;
-  Expr *expr;
-  SimpleList *simple_list2;
-  StmtBody *stmt_body;
-};
+
 
 
 

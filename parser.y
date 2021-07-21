@@ -187,44 +187,46 @@ Stmt_Body: {cout << "StmtBody { ";} Stmt {cout <<"Stmt ";} Stmt_Full {cout << "}
 Stmt_Full:   Stmt Stmt_Full   {cout <<", Stmt"; }
 | /*e*/
 ; 
+
+
+
 If_Clause   :
-    "if" Expr ':' Elsif_Clause Else_Clause "end";
-
-
-Elsif_Clause : {cout << "ElseifClause{ ";} "elsif" Expr ':' Stmt_Body Elsif_Clause
-| /*e*/
+    "if" Expr ':' Stmt_Body Elsif_Clause Else_Clause "end" {$$ = new If($2, $4, $5, $6);}
 ;
 
-Else_Clause: {cout << "{ElseClause{} ";} "else" ':' Stmt_Body {cout << "} ";}
-| /*e*/
+
+Elsif_Clause : "elsif" Expr ':' Stmt_Body Elsif_Clause {$1->append($2, $4)}
+| /*e*/ {$$ = new Elsif();}
 ;
 
-For_Clause: {cout << "{ForClause{ ";} "for" Simple_List ';' Expr ';' Simple_List ':' Stmt_Body "end"{cout << "} ";}
+Else_Clause:  "else" ':' Stmt_Body {$$ = new Else($3);}
+| /*e*/ {$$ = new Else();}
+;
+
+For_Clause: "for" Simple_List ';' Expr ';' Simple_List ':' Stmt_Body "end" {$$ = new For($2, $4, $6, $8)}
 ;
 
 Simple:
-    "skip"          {cout << "Skip"; }
-|   {cout << "{Assign{ "; }Atom ":=" Expr {cout << "}"; }  
-|   Call            { }
+    "skip"                                  {$$ = new Skip(); }
+|   Atom ":=" Expr                          {$$ = new Assign($1, $3) }  
+|   Call                                    {$$ = $1 }
 ;
 
 
-Simple_List: Simple  Simple_Comma    { }
+Simple_List: Simple  Simple_Comma    {$2->append($1); $$ = $2; }
 ;
-
-
 
 /* Υλοποιεί το ("," Simple)* της γραμματικής.
 Το SimpleList() κατασκευάζει μια κενή λίστα από Simples η οποία
 θα γίνει append. */
 Simple_Comma:
-    /*ε*/  {}
-|  {cout << ","} ',' Simple Simple_Comma 
+    /*ε*/                   {$$ = new SimpleList();}
+|  ',' Simple Simple_Comma  {$3->append($2); $$ = $3;}
 ;
 
 Call:
-    {cout << "FunctionCall{ ";} T_id  '(' ')'                  {$$ = new FunctionCall()}
-|   {cout << "FunctionCall{ ";} T_id  '(' Expr_List ')' { }    {cout << "} ";}
+    {cout << "FunctionCall{ ";} T_id  '(' ')'                  {$$ = new FunctionCall($1);}
+|   {cout << "FunctionCall{ ";} T_id  '(' Expr_List ')' { }    {$$ = new FunctionCall($1, $3);}
 ;
 
 Expr_List: Expr  Expr_Comma    { $2->append($1); $$ = $2;}
