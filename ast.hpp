@@ -47,7 +47,62 @@ class Simple: public Stmt {
 
 
 
+// Done
+class Type: public AST{
+public:
+  Type(std::string str): type(str), hasSubtype(false){}
+  Type(std::string str, Type * typ): type(str), hasSubtype(true), subtype(typ){}
+  ~Type(){
+    if(hasSubtype) delete subtype;
+  }
 
+  virtual void printOn(std::ostream &out) const override {
+    out << "Type( " << type << " ";
+    if (hasSubtype){
+      out << *subtype;
+    }
+    out << ")";
+
+  }
+
+
+Type:
+    "int" {$$ = new Type(std::string("int"));}
+|   "char" {$$ = new Type(std::string("char"));}
+|   "bool" {$$ = new Type(std::string("bool"));}
+|   Type '[' ']' {$$ = new Type(std::string("array"), $1);}
+|   "list" '[' Type ']' {$$ = new Type(std::string("list"), $3);}
+;
+  virtual void compile() const override {
+    printf("Type (")
+    if(type=="int"){
+      printf("int");
+    }
+    else if(type=="char "){
+      printf("char");
+    }
+    else if(type=="bool "){
+      printf("bool");
+    }
+    else if(type=="array "){
+      printf("array");
+    }
+    else if(type=="list "){
+      printf("list");
+    } else{
+      printf("invalid type ")
+    }
+
+    if (hasSubtype){
+      subtype->compile();
+    }
+    printf(")");
+  }
+private:
+  std::string type;
+  bool hasSubtype;
+  Type * subtype;
+};
 
 // Done
 class Return: public Stmt{
@@ -311,7 +366,6 @@ public:
   }
 };
 
-//TODO : Fix weird type issue on printOn
 class FunctionCall: public Simple, public Atom {
 public:
   FunctionCall(Id *n): name(n), hasParams(false) {}

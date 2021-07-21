@@ -153,11 +153,11 @@ Var_Comma:
 ;
 
 Type:
-    "int" {}
-|   "char" {}
-|   "bool" {}
-|   Type '[' ']' {}
-|   "list" '[' Type ']' {}
+    "int" {$$ = new Type(std::string("int"));}
+|   "char" {$$ = new Type(std::string("char"));}
+|   "bool" {$$ = new Type(std::string("bool"));}
+|   Type '[' ']' {$$ = new Type(std::string("array"), $1);}
+|   "list" '[' Type ']' {$$ = new Type(std::string("list"), $3);}
 ;
 
 
