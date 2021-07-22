@@ -766,6 +766,72 @@ private:
 };
 
 
+class FunctionDeclaration: public AST {
+public:
+  FunctionDeclaration(Header *hd): header(hd){}
+  ~FunctionDeclaration() {delete header;}
+  virtual void printOn(std::ostream &out) const override {
+    out << "\n<FunctionDeclaration>\n" << *header << "\n</FunctionDeclaration>\n" ;
+  }
+  virtual void compile() const override {
+    printf("Function Decl(\n");
+    header->compile();
+  }
+private:
+  Header *header;
+};
+
+
+class FunctionDefinitionList: public AST {
+public:
+  FunctionDefinitionList(){}
+  ~FunctionDefinitionList() {for (AST *a : definitions) delete a;}
+
+  void append(AST* a) {
+    definitions.push_back(a);
+  }
+
+  virtual void printOn(std::ostream &out) const override {
+    out << "\n<FunctionDefinitionList>\n"; 
+    
+    for (AST *a : definitions) out << *a;
+    out <<"\n</FunctionDefinitionList>\n" ;
+  }
+  virtual void compile() const override {
+    printf("FunctionDefinitionList(\n");
+    
+    for (AST *a : definitions) a->compile();
+    }
+private:
+  std::vector<AST *> definitions;
+};
+
+
+
+class FunctionDefinition: public AST {
+public:
+  FunctionDefinition(Header * hd, FunctionDefinitionList *fdl, StmtBody *stb):
+  header(hd), definitions(fdl), body(stb){}
+  ~FunctionDefinition() {delete header; delete definitions; delete body;}
+
+  virtual void printOn(std::ostream &out) const override {
+    out << "\n<FunctionDefinition>\n" << *header << *definitions << *body <<"\n</FunctionDefinition>\n";
+  }
+  virtual void compile() const override {
+    printf("Function Definition(\n");
+    
+    header->compile();
+    definitions->compile();
+    body->compile();
+    
+    }
+private:
+  Header *header;
+  FunctionDefinitionList *definitions;
+  StmtBody *body;
+};
+
+
 
 
 

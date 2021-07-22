@@ -110,18 +110,18 @@
 ==============================================*/
 
 Program:
-    Func_def 
+    Func_def {std::cout << $1;}
 ;
 
 Func_def:
-    "def" Header ':' Func_def_dec  Stmt_Body "end"
+    "def" Header ':' Func_def_dec  Stmt_Body "end" {$$ = new FunctionDefinition($2, $4, $5);}
 ;
 
 Func_def_dec:
-    Func_def Func_def_dec
-|   Func_Decl Func_def_dec 
-|   Var_Def Func_def_dec
-|   /*ε*/ 
+    Func_def Func_def_dec   {$2->append($1); $$ = $2;}
+|   Func_Decl Func_def_dec  {$2->append($1); $$ = $2;}
+|   Var_Def Func_def_dec    {$2->append($1); $$ = $2;}
+|   /*ε*/                   {$$ = new FunctionDefinitionList()}
 ;
 
 Header:
@@ -133,7 +133,7 @@ Header:
 
 
 Func_Decl:
-    "decl" Header 
+    "decl" Header {$$ = new FunctionDeclaration($2);}
 ;
 
 Par:
@@ -187,7 +187,7 @@ If_Clause   :
 ;
 
 
-Elsif_Clause : "elsif" Expr ':' Stmt_Body Elsif_Clause {$1->append($2, $4)}
+Elsif_Clause : "elsif" Expr ':' Stmt_Body Elsif_Clause {$1->append($2, $4);}
 | /*e*/ {$$ = new Elsif();}
 ;
 
