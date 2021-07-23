@@ -13,7 +13,6 @@ class AST{
 public:
   virtual ~AST() {}
   virtual void printOn(std::ostream &out) const = 0;
-  virtual void compile() const = 0;
 };
 
 inline std::ostream& operator<< (std::ostream &out, const AST &t) {
@@ -55,32 +54,6 @@ public:
     out << " </Type> ";
 
   }
-  virtual void compile() const override {
-    printf("Type (");
-
-    if(type=="int"){
-      printf("int ");
-    }
-    else if(type=="char"){
-      printf("char ");
-    }
-    else if(type=="bool"){
-      printf("bool ");
-    }
-    else if(type=="array"){
-      printf("array ");
-    }
-    else if(type=="list"){
-      printf("list ");
-    } else{
-      printf("invalid type ");
-    }
-
-    if (hasSubtype){
-      subtype->compile();
-    }
-    printf(")");
-  }
 private:
   std::string type;
   bool hasSubtype;
@@ -94,9 +67,6 @@ public:
   virtual void printOn(std::ostream &out) const override {
     out << "<Id name=\"" << var << "\"> ";
   }
-  virtual void compile() const override {
-    printf("i smell a variable : %s\n", var.c_str());    
-  }
 private:
   std::string var;
 };
@@ -107,13 +77,6 @@ public:
   Array(Atom *a, Expr *e): atom(a), expr(e) {}
   virtual void printOn(std::ostream &out) const override {
     out << "\n<Array>\n" << *atom << "\n" << *expr << "\n</Array>\n";
-  }
-  virtual void compile() const override {
-
-    printf("i am arraying huehue\n");
-    atom->compile();
-    expr->compile();
-
   }
 private:
   Atom *atom;
@@ -127,10 +90,6 @@ public:
   virtual void printOn(std::ostream &out) const override {
     out << "<String value=\"" << strlit << "\"> ";
   }
-  virtual void compile() const override {
-    /*Εδώ θα μπει ο ενδιάμεσος κώδικας μετά*/
-    printf("string_literal : %s\n", strlit.c_str());
-  }
 private:
   std::string strlit;
 };
@@ -142,10 +101,6 @@ public:
   virtual void printOn(std::ostream &out) const override {
     out << "<CharConst value='" << char_const << "'> ";
   }
-  virtual void compile() const override {
-    /*Εδώ θα μπει ο ενδιάμεσος κώδικας μετά*/
-    printf("char const : %c\n", char_const);
-  }
 private:
   char char_const;
 };
@@ -156,10 +111,6 @@ public:
   IntConst(int n): num(n) {}
   virtual void printOn(std::ostream &out) const override {
     out << "<IntConst value=" << num << "> ";
-  }
-  virtual void compile() const override {
-    /*Εδώ θα μπει ο ενδιάμεσος κώδικας μετά*/
-    printf("int_const : %d\n", num);
   }
 private:
   int num;
@@ -173,11 +124,6 @@ public:
   virtual void printOn(std::ostream &out) const override {
     out << "<New> " << *typ << *expr << "</New> ";
   }
-  virtual void compile() const override {
-    printf("New \n");
-    typ->compile();
-    expr->compile();
-  }
 private:
   Type *typ;
   Expr *expr;
@@ -190,9 +136,6 @@ public:
   virtual void printOn(std::ostream &out) const override {
     out << "<Nil> ";
   }
-  virtual void compile() const override {
-    printf("Nil\n");
-  }
 };
 
 
@@ -201,14 +144,6 @@ public:
   Boolean(std::string b): boo(b) {} //wink wink pap
   virtual void printOn(std::ostream &out) const override {
     out << "<Boolean value=" << boo << "> ";
-  }
-  virtual void compile() const override {
-    if (boo == "true")
-      printf("true\n");
-    else if (boo == "false")
-      printf("false\n");
-    else
-      printf("Wrong bool value dummy");
   }
 private:
   std::string boo;
@@ -222,41 +157,6 @@ public:
   virtual void printOn(std::ostream &out) const override {
     out << "\n<Binop op=\"" << op << "\">\n" << *left << *right << "\n</BinOp>\n";
   }
-  virtual void compile() const override {
-    left->compile();
-    right->compile();
-    /*Στην θέση των παρακάτω θα μπει ο ενδιάμεσος κώδικας μετά*/
-    if(op == "+")
-      printf("operator +\n");
-    else if(op == "-")
-      printf("operator -\n");
-    else if(op == "*")
-      printf("operator *\n");
-    else if(op == "/")
-      printf("operator /\n");
-    else if(op == "mod")
-      printf("operator mod\n");
-    else if(op == "=")
-      printf("operator =\n");
-    else if(op == ">")
-      printf("operator >\n");
-    else if(op == "<")
-      printf("operator <\n");
-    else if(op == ">=")
-      printf("operator >=\n");
-    else if(op == "<=")
-      printf("operator <=\n");
-    else if(op == "<>")
-      printf("operator <>\n");
-    else if(op == "and")
-      printf("operator and\n");
-    else if(op == "or")
-      printf("operator or\n");
-    else if(op == "#")
-      printf("operator #\n");
-    else 
-      printf("Wrong operator dummy! Huehuehuehue\n");
-    }
 private:
   Expr *left;
   std::string op;
@@ -271,23 +171,6 @@ public:
   virtual void printOn(std::ostream &out) const override {
     out << "\n<UnOp op=\"" << op << "\">\n" << *right << "\n</UnOp>\n";
   }
-  virtual void compile() const override {
-    right->compile();
-    if(op == "+")
-      printf("operator +\n");
-    else if(op == "-")
-      printf("operator -\n");
-    else if(op == "nil?")
-      printf("operator nil?\n");
-    else if(op == "not")
-      printf("operator not\n");
-    else if(op == "head")
-      printf("operator head\n");
-    else if(op == "tail")
-      printf("operator tail\n");
-    else 
-      printf("Wrong unary operator dummy! Huehuehuehue\n");
-    }
 private:
   std::string op;
   Expr *right;
@@ -315,12 +198,6 @@ public:
     }
     out << "\n</VarList>\n";
   }
-  virtual void compile() const override {
-    printf("VarList and these are my variantes: \n");
-    type->compile();
-    for (Id * i : ids)
-      i->compile(); 
-    }
 private:
   std::vector<Id *> ids;
   Type * type;
@@ -332,16 +209,6 @@ public:
   Formal(VarList* v, bool isref): varlist(v), isRef(isref) {}
 virtual void printOn(std::ostream &out) const override {
     out << "\n<Formal isRef=\"" << (isRef ? "yes" : "no") << "\">\n" << *varlist << "</Formal>";
-  }
-  virtual void compile() const override {
-    printf("Formal, isref = ");
-    if(isRef){
-      printf("yes, ");
-    }else{
-      printf("no, ");
-    }
-    varlist->compile();
-    printf("\n");
   }
 private:
   VarList* varlist;
@@ -355,6 +222,7 @@ public:
   ~FormalList(){
     for (Formal * f : formals) delete f;
   }
+
   void append(Formal * f) {
     formals.push_back(f);
   }
@@ -367,11 +235,6 @@ public:
     }
     out << "\n</FormalList>\n";
   }
-  virtual void compile() const override {
-    printf("FormalList and these are my formales: \n");
-    for (Formal * f : formals)
-      f->compile(); 
-    }
 private:
   std::vector<Formal *> formals;
 };
@@ -380,7 +243,7 @@ private:
 class Header: public AST {
 public:
   Header(Type *t, Id *i, FormalList *f): type(t), formals(f), id(i) {}
-virtual void printOn(std::ostream &out) const override {
+  virtual void printOn(std::ostream &out) const override {
     out << "<Header>\n"; 
     if(type == NULL){
       out << "<NoType>";
@@ -395,24 +258,6 @@ virtual void printOn(std::ostream &out) const override {
     }
     out << "\n</Header>\n";
   }
-  virtual void compile() const override {
-    printf("Header, type = ");
-    if(type == NULL){
-      printf("none");
-    }else{
-      type->compile();
-    }
-    printf(" id:");
-    id->compile();
-    printf(", params: ");
-    if(formals == NULL){
-      printf("none )");
-    }else{
-      formals->compile();
-      printf(")");
-    }
-    printf("\n");
-  }
 private:
   Type *type;
   FormalList* formals;
@@ -423,13 +268,8 @@ private:
 class Return: public Stmt{
 public:
   Return(Expr* e): ret_expr(e) {}
-virtual void printOn(std::ostream &out) const override {
+  virtual void printOn(std::ostream &out) const override {
     out << "\n<Return>\n" << *ret_expr << "\n</Return>\n";
-  }
-  virtual void compile() const override {
-    printf("Return(), expression =");
-    ret_expr->compile();
-    printf("\n");
   }
 private:
   Expr* ret_expr;
@@ -441,9 +281,6 @@ public:
   Exit() {}
   virtual void printOn(std::ostream &out) const override {
     out << "\n<Exit>\n";
-  }
-  virtual void compile() const override {
-    printf("Exit\n");
   }
 };
 
@@ -463,11 +300,6 @@ public:
     }
     out << "\n</StmtBody>\n";
   }
-  virtual void compile() const override {
-    printf("Stmt body, check these out : \n");
-    for (Stmt *fwtakaros : stmts)
-      fwtakaros->compile();
-  }
   
 private:
   std::vector<Stmt*> stmts;
@@ -480,11 +312,6 @@ public:
   virtual void printOn(std::ostream &out) const override {
     out << "\n<Assign>\n" << *atom << *expr << "\n</Assign>\n";
   }
-  virtual void compile() const override {
-    printf("Assign\n");
-    atom->compile();
-    expr->compile();
-  }
 private:
   Atom *atom;
   Expr *expr;
@@ -496,9 +323,6 @@ public:
   Skip() {}
   virtual void printOn(std::ostream &out) const override {
     out << "\n<Skip>\n";
-  }
-  virtual void compile() const override {
-    printf("Skip\n");
   }
 };
 
@@ -536,13 +360,6 @@ public:
       out << ")\n";
     }
   }
-  virtual void compile() const override {
-    printf("ElseIf \n");
-    for(int i=0; i< (int) elsif_stmt_bodies.size(); i++){
-        elsif_conds[i]->compile();
-        elsif_stmt_bodies[i]->compile();
-    }
-  }
 
 private:
   std::vector<Expr *> elsif_conds;
@@ -573,11 +390,6 @@ public:
     if(!else_stmt.empty()){
       out << "\n<Else>\n" << *else_stmt[0] << "\n</Else>\n";
     }
-  }
-  virtual void compile() const override {
-    printf("Else \n");
-    if(!else_stmt.empty()){
-      else_stmt[0]->compile();}
   }
 
 private:
@@ -626,13 +438,7 @@ public:
     }
     out << "\n</If>\n";
   }
-  virtual void compile() const override {
-    printf("If statement and these are my iffies: \n");
-    for (int i=0; i< (int) conditions.size();i++){
-      conditions[i]->compile();
-      statements[i]->compile();
-    }
-  }
+
 private:
   std::vector<Expr *> conditions;
   std::vector<StmtBody *> statements;
@@ -655,11 +461,6 @@ public:
     }
     out << "\n</SimpleList>\n";
   }
-  virtual void compile() const override {
-    printf("SimpleList and these are my stitches: \n");
-    for (Simple *s : simples)
-      s->compile();
-  }
   std::vector<Simple *> get_simples_list(){
     return simples;
   }
@@ -680,14 +481,7 @@ public:
   virtual void printOn(std::ostream &out) const override {
     out << "\n<For>\n" << *simple_list1 << *expr << *simple_list2  << *stmt_body << "\n</For>\n";
   }
-  virtual void compile() const override {
-    printf("For(");
-    simple_list1->compile();
-    expr->compile();
-    simple_list2->compile();
-    stmt_body->compile();
-    printf(")\n");
-  }
+
 private:
   SimpleList *simple_list1;
   Expr *expr;
@@ -711,11 +505,7 @@ public:
     }
     out << "\n</ExprList>\n";
   }
-  virtual void compile() const override {
-    printf("ExprList and these are my stitches: \n");
-    for (Expr *e : expressions)
-      e->compile();
-  }
+
   std::vector<Expr*> get_expr_list(){
     return expressions;
   }
@@ -728,23 +518,13 @@ class FunctionCall: public Simple, public Atom {
 public:
   FunctionCall(Id *n): name(n), hasParams(false) {}
   FunctionCall(Id *n, ExprList *el): name(n), params(el), hasParams(true) {}
-  //~Call(){}
   virtual void printOn(std::ostream &out) const override {
     if(!hasParams)
       out << "\n<FunctionCall>\n" << *name << "\n</FunctionCall>\n";
     else
       out << "\n<FunctionCall>\n" << *name << *params << "\n</FunctionCall>\n";
   }
-  virtual void compile() const override {
-
-    printf("Function Call(\n");
-    name->compile();
-    if(hasParams){
-      printf(", ");
-      params->compile();
-    }
-    printf(")\n");
-  }
+  
 private:
   Id *name;
   ExprList *params;
@@ -759,10 +539,7 @@ public:
   virtual void printOn(std::ostream &out) const override {
     out << "\n<FunctionDeclaration>\n" << *header << "\n</FunctionDeclaration>\n" ;
   }
-  virtual void compile() const override {
-    printf("Function Decl(\n");
-    header->compile();
-  }
+
 private:
   Header *header;
 };
@@ -783,11 +560,7 @@ public:
     for (AST *a : definitions) out << *a;
     out <<"\n</FunctionDefinitionList>\n" ;
   }
-  virtual void compile() const override {
-    printf("FunctionDefinitionList(\n");
-    
-    for (AST *a : definitions) a->compile();
-    }
+
 private:
   std::vector<AST *> definitions;
 };
@@ -802,14 +575,7 @@ public:
   virtual void printOn(std::ostream &out) const override {
     out << "\n<FunctionDefinition>\n" << *header << *definitions << *body <<"\n</FunctionDefinition>\n";
   }
-  virtual void compile() const override {
-    printf("Function Definition(\n");
-    
-    header->compile();
-    definitions->compile();
-    body->compile();
-    
-    }
+
 private:
   Header *header;
   FunctionDefinitionList *definitions;
