@@ -21,26 +21,24 @@ inline std::ostream& operator<< (std::ostream &out, const AST &t) {
   return out;
 }
 
+
 // Virtual to avoid "diamond of death"
 class Expr: virtual public AST {
 };
 
+
 class Stmt: virtual public AST {
 };
 
+
 class Atom: public Expr { 
 };
+
 
 class Simple: public Stmt {  
 };
 
 
-
-
-
-
-
-// Done
 class Type: public AST{
 public:
   Type(std::string str): type(str), hasSubtype(false){}
@@ -89,6 +87,7 @@ private:
   Type * subtype;
 };
 
+
 class Id: public Atom {
 public:
   Id(std::string v): var(v) {}
@@ -103,7 +102,6 @@ private:
 };
 
 
-// Done
 class Array: public Atom {
 public:
   Array(Atom *a, Expr *e): atom(a), expr(e) {}
@@ -122,7 +120,7 @@ private:
   Expr *expr;
 };
 
-// Done
+
 class StringLiteral: public Atom {
 public:
   StringLiteral(std::string str): strlit(str) {}
@@ -138,7 +136,6 @@ private:
 };
 
 
-// Done
 class CharConst: public Expr {
 public:
   CharConst(char c): char_const(c) {}
@@ -153,7 +150,7 @@ private:
   char char_const;
 };
 
-// Done
+
 class IntConst: public Expr {
 public:
   IntConst(int n): num(n) {}
@@ -168,7 +165,7 @@ private:
   int num;
 };
 
-// Done
+
 class New: public Expr {
 public:
   New(Type *t, Expr *right): typ(t), expr(right){}
@@ -187,7 +184,6 @@ private:
 };
 
 
-
 class Nil: public Expr {
 public:
   Nil() {}
@@ -199,7 +195,7 @@ public:
   }
 };
 
-// Done
+
 class Boolean: public Expr {
 public:
   Boolean(std::string b): boo(b) {} //wink wink pap
@@ -218,7 +214,7 @@ private:
   std::string boo;
 };
 
-// Done
+
 class BinOp: public Expr {
 public:
   BinOp(Expr *l, std::string o, Expr *r): left(l), op(o), right(r) {}
@@ -267,7 +263,7 @@ private:
   Expr *right;
 };
 
-// Done
+
 class UnOp: public Expr {
 public:
   UnOp(std::string(o), Expr *r): op(o), right(r) {}
@@ -297,11 +293,6 @@ private:
   Expr *right;
 };
 
-
-
-
-
-// Below here 'constructed' stuff
 
 class VarList: public AST {
 public:
@@ -429,9 +420,6 @@ private:
 };
 
 
-
-
-// Done
 class Return: public Stmt{
 public:
   Return(Expr* e): ret_expr(e) {}
@@ -448,7 +436,6 @@ private:
 };
 
 
-// Done
 class Exit: public Stmt{
 public:
   Exit() {}
@@ -460,7 +447,7 @@ public:
   }
 };
 
-// Done
+
 class StmtBody: public AST {
 public:
   StmtBody(): stmts() {}
@@ -487,8 +474,6 @@ private:
 };
 
 
-
-// Done
 class Assign: public Simple{
 public:
   Assign(Atom *a, Expr *e): atom(a), expr(e) {}
@@ -505,7 +490,7 @@ private:
   Expr *expr;
 };
 
-// Done
+
 class Skip: public Simple{
 public:
   Skip() {}
@@ -563,6 +548,8 @@ private:
   std::vector<Expr *> elsif_conds;
   std::vector<StmtBody *> elsif_stmt_bodies;
 };
+
+
 class Else: public Stmt {
 public:
   Else() {}
@@ -596,6 +583,7 @@ public:
 private:
   std::vector<StmtBody *> else_stmt;
 };
+
 
 class If: public Stmt {
 public:
@@ -650,6 +638,7 @@ private:
   std::vector<StmtBody *> statements;
   bool hasElse = false;
 };
+
 
 class SimpleList: public AST {
 public:
@@ -707,7 +696,6 @@ private:
 };
 
 
-
 class ExprList: public AST {
 public:
   ExprList(): expressions() {}
@@ -734,6 +722,7 @@ public:
 private:
   std::vector<Expr*> expressions;
 };
+
 
 class FunctionCall: public Simple, public Atom {
 public:
@@ -762,6 +751,7 @@ private:
   bool hasParams;
 };
 
+
 class FunctionDeclaration: public AST {
 public:
   FunctionDeclaration(Header *hd): header(hd){}
@@ -776,6 +766,7 @@ public:
 private:
   Header *header;
 };
+
 
 class FunctionDefinitionList: public AST {
 public:
@@ -801,6 +792,7 @@ private:
   std::vector<AST *> definitions;
 };
 
+
 class FunctionDefinition: public AST {
 public:
   FunctionDefinition(Header * hd, FunctionDefinitionList *fdl, StmtBody *stb):
@@ -823,38 +815,6 @@ private:
   FunctionDefinitionList *definitions;
   StmtBody *body;
 };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// Below here not done
-
-
-
-
-
-
-
-
-
-
-
 
 
 #endif

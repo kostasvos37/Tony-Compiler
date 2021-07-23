@@ -192,13 +192,13 @@ For_Clause:
 ;
 
 Simple:
-    "skip"           {$$ = new Skip(); }
-|   Atom ":=" Expr   {$$ = new Assign($1, $3); }  
-|   Call             {$$ = $1 ;}
+    "skip"           {$$ = new Skip();}
+|   Atom ":=" Expr   {$$ = new Assign($1, $3);}  
+|   Call             {$$ = $1;}
 ;
 
 Simple_List: 
-    Simple  Simple_Comma    {$2->append($1); $$ = $2; }
+    Simple  Simple_Comma    {$2->append($1); $$ = $2;}
 ;
 
 /* Υλοποιεί το ("," Simple)* της γραμματικής.
