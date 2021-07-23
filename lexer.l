@@ -69,11 +69,11 @@ P [\x20-\x7e]
 {S}                 {return yytext[0];}
 ":="				{return T_assign;}
 
-{L}({L}|{D}|"_"|"?")*              {yylval.name=yytext; return T_id;} 
+{L}({L}|{D}|"_"|"?")*              {yylval.name=strdup(yytext); return T_id;} 
 
 "'"([\x20-\x26\x28-\x7e]|\\{E})"'" {yylval.c=yytext[0]; return T_singlechar;}
 
-\"([\x20-\x21\x23-\x7e]|\\\")*\"   {yylval.name=yytext; return T_string;}
+\"([\x20-\x21\x23-\x7e]|\\\")*\"   {yylval.name=strdup(yytext); return T_string;}
 
 %[^\n]*\n			    {linecount++;}
 
