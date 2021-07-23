@@ -31,67 +31,67 @@ P [\x20-\x7e]
 %x COMMENT
 
 %%
-"and" { return T_and;}
-"bool" {return T_bool;}
-"char" {return T_char;}
-"decl" {return T_decl;}
-"def" {return T_def;}
-"else" {return T_else;}
-"elseif" {return T_elsif;}
-"end" {return T_end;}
-"exit" {return T_exit;}
-"false" {return T_false;}
-"for" {return T_for;}
-"head" {return T_head;}
-"if" {return T_if;}
-"int" {return T_int;}
-"list" {return T_list;}
-"mod" { return T_mod;}
-"new" {return T_new;}
-"nil" {return T_nil;}
-"nil?" {return T_nil2;}
-"not" {return T_not;}
-"or" {return T_or;}
-"ref" {return T_ref;}
-"return" {return T_return;}
-"skip" {return T_skip;}
-"tail" {return T_tail;}
-"true" {return T_true;}
+"and"     {return T_and;}
+"bool"    {return T_bool;}
+"char"    {return T_char;}
+"decl"    {return T_decl;}
+"def"     {return T_def;}
+"else"    {return T_else;}
+"elseif"  {return T_elsif;}
+"end"     {return T_end;}
+"exit"    {return T_exit;}
+"false"   {return T_false;}
+"for"     {return T_for;}
+"head"    {return T_head;}
+"if"      {return T_if;}
+"int"     {return T_int;}
+"list"    {return T_list;}
+"mod"     {return T_mod;}
+"new"     {return T_new;}
+"nil"     {return T_nil;}
+"nil?"    {return T_nil2;}
+"not"     {return T_not;}
+"or"      {return T_or;}
+"ref"     {return T_ref;}
+"return"  {return T_return;}
+"skip"    {return T_skip;}
+"tail"    {return T_tail;}
+"true"    {return T_true;}
 
 
 {D}+ {yylval.num=std::stoi(yytext); return T_const;}
 
 {O}  {return yytext[0];}
-"<="				{ return T_le;	}
-">="				{ return T_ge;}
-"<>"				{ return T_ne;}
+"<="				{return T_le;}
+">="				{return T_ge;}
+"<>"				{return T_ne;}
 
-{S}            {return yytext[0];}
-":="				{ return T_assign;	}
+{S}                 {return yytext[0];}
+":="				{return T_assign;}
 
-{L}({L}|{D}|"_"|"?")* {yylval.name=yytext; return T_id;} 
+{L}({L}|{D}|"_"|"?")*              {yylval.name=yytext; return T_id;} 
 
 "'"([\x20-\x26\x28-\x7e]|\\{E})"'" {yylval.c=yytext[0]; return T_singlechar;}
 
-\"([\x20-\x21\x23-\x7e]|\\\")*\" {yylval.name=yytext; return T_string;}
+\"([\x20-\x21\x23-\x7e]|\\\")*\"   {yylval.name=yytext; return T_string;}
 
-%[^\n]*\n			{ /* nothing */ linecount++; }
+%[^\n]*\n			    {linecount++;}
 
-\<\* { BEGIN(COMMENT); }
-<COMMENT>\<\* {++comment_counter;}
-<COMMENT>\*\> {if (comment_counter > 0) --comment_counter;
-                else BEGIN(INITIAL);}
+\<\*                    { BEGIN(COMMENT); }
+<COMMENT>\<\*           {++comment_counter;}
+<COMMENT>\*\>           {if (comment_counter > 0) --comment_counter;
+                            else BEGIN(INITIAL);}
 
-<COMMENT>[^\n]          {/* do nothing */}
-<COMMENT>\n             {/* change line | do nothing */ linecount++; }
-{W}+         { /* nothing */ }
-\n			{ linecount++;}
+<COMMENT>[^\n]          {/* nothing */}
+<COMMENT>\n             {linecount++;}
+{W}+                    {/* nothing */ }
+\n			            {linecount++;}
 
-. {yyerror("Error at line "); exit (1);}
+.                       {yyerror("Error at line "); exit (1);}
 
 %%
 
-//TODO : Fix to add lines
+//TODO: Fix to add lines
 void yyerror(const char *msg) {
   fprintf(stderr, "%s\n", msg);
   exit(1);
