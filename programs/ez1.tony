@@ -1,3 +1,7 @@
 def putc():
-  arr := 5
+  if limit >= 2: counter := counter + 1 puti(2) puts("\n")
+  elsif limit = 3: x:=4
+  elsif limit = 3: x:=4
+  else: x:=2
+  end
 end

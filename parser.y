@@ -178,7 +178,7 @@ If_Clause:
 ;
 
 Elsif_Clause: 
-    "elsif" Expr ':' Stmt_Body Elsif_Clause {$5->append($2, $4);}
+    "elsif" Expr ':' Stmt_Body Elsif_Clause {$5->append($2, $4); $$ = $5;}
 |   /*e*/                                   {$$ = new Elsif();}
 ;
 

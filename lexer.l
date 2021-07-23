@@ -37,7 +37,7 @@ P [\x20-\x7e]
 "decl"    {return T_decl;}
 "def"     {return T_def;}
 "else"    {return T_else;}
-"elseif"  {return T_elsif;}
+"elsif"   {return T_elsif;}
 "end"     {return T_end;}
 "exit"    {return T_exit;}
 "false"   {return T_false;}
