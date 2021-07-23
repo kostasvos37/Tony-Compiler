@@ -215,12 +215,12 @@ Call:
 ;
 
 Expr_List: 
-    Expr  Expr_Comma    { $2->append($1); $$ = $2;}
+    Expr  Expr_Comma    {$2->append($1); $$ = $2;}
 ;
 
 Expr_Comma:
-    /*ε*/               { $$ = new ExprList();}
-|   ',' Expr Expr_Comma { $3->append($2); $$ = $3;}
+    /*ε*/               {$$ = new ExprList();}
+|   ',' Expr Expr_Comma {$3->append($2); $$ = $3;}
 ;
 
 Atom:
