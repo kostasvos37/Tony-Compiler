@@ -6,7 +6,7 @@ CXXFLAGS=-Wall -std=c++11
 default: tony
 
 lexer.cpp: lexer.l
-	flex -s -o lexer.cpp lexer_pure.l
+	flex -s -o lexer.cpp lexer.l
 
 lexer.o: lexer.cpp lexer.hpp parser.hpp
 

@@ -1,9 +1,8 @@
 %{
 #include <cstdio>
 #include <string.h>
+#include "ast.hpp"
 #include "lexer.hpp"
-//#include "ast.hpp"
-
 %}
 
 /*Ορίζουμε τους σημασιολογικούς τύπους των τερματικών που φαίνονται στα tokens παρακάτω. 
@@ -12,38 +11,7 @@
 
 Επίσης, ορίζουμε και τους σημασιολογικούς τύπους των μη τερματικών συμβόλων όπως το Expr,
 το Stmt κλπ.*/
-%union {
-    /* AST *ast;
-    Expr *expr;
-    Stmt *stmt;
-    SimpleList *simple_list;
-    ExprList *expr_list;
-    VarList *var_list;
-    int num;
-    char c;
-    bool b;
-    char op[4];
-    char sep[2];
-    char name[80]; //!!
-    char str[80]; //!! */
-    const char *name;
-    int num;
-    struct expr {
-        int temp;
-    } Expr;
-    struct valu {
-        int temp;
-    } RValue;
-    struct stmt {
-        int temp;
-    } Stmt;
-    struct call {
-        int temp;
-    } Call;
-    struct atom {
-        int temp;
-    } Atom;    
-}
+
 
 %token T_and            "and"
 %token T_bool           "bool"
@@ -60,38 +28,22 @@
 %token T_if             "if"
 %token T_int            "int"
 %token T_list           "list"
-%token T_mod        "mod"
+%token T_mod            "mod"
 %token T_new            "new"
-%token T_not          "not"
+%token T_not            "not"
 %token T_nil            "nil"
 %token T_nil2           "nil?"
-%token T_or         "or"
+%token T_or             "or"
 %token T_ref            "ref"
 %token T_return         "return"
 %token T_skip           "skip"
 %token T_tail           "tail"
 %token T_true           "true"
 %token T_le             "<="
-%token T_ge         ">="
-%token T_ne         "<>"
-%token T_assign     ":="
+%token T_ge             ">="
+%token T_ne             "<>"
+%token T_assign         ":="
 
-%token<name> T_id      
-%token<num> T_const     
-%token<name> T_string    
-%token<num> T_singlechar  
-
-%type<name> Header
-%type<Stmt> Stmt
-%type<Stmt> Stmt_Body
-%type<Stmt> Stmt_Full
-%type<name> Type
-%type<Stmt> If_Clause
-%type<Stmt> For_Clause
-%type<Expr> Expr
-%type<RValue> RValue
-%type<Atom> Atom
-%type<Call> Call
 
 %left "or" 
 %left "and"
@@ -102,7 +54,59 @@
 %left '*' '/' "mod"
 %left UMINUS UPLUS
 
+%union {
+    char *name;
+    int num;
+    char c;
 
+    Expr *expr;
+    Atom *atom;
+    ExprList *exprlist;
+    FunctionCall *call;
+    SimpleList *simplelist;
+    Simple *simple;
+    Stmt *stmt;
+    StmtBody *stmtbody;
+    Type *type;
+    VarList *varlist;
+    Formal *formal;
+    FormalList *formallist;
+    Header *header;
+    FunctionDeclaration *funcdecl;
+    FunctionDefinitionList *funcdeflist;
+    FunctionDefinition *funcdef;
+    Elsif *elsif;
+    Else *els;
+    If *iff;
+    For *fo;
+
+}
+
+%token<name> T_id      
+%token<num> T_const     
+%token<name> T_string    
+%token<c> T_singlechar  
+
+%type<funcdef> Func_def
+%type<funcdeflist> Func_def_dec
+%type<funcdecl> Func_Decl
+%type<header> Header
+%type<formallist> Par
+%type<formal> Formal
+%type<varlist> Var_Def Var_Comma
+%type<type> Type
+%type<stmtbody> Stmt_Body Stmt_Full
+%type<iff> If_Clause
+%type<elsif> Elsif_Clause
+%type<els> Else_Clause
+%type<fo> For_Clause
+%type<stmt> Stmt  
+%type<simple> Simple
+%type<simplelist> Simple_Comma Simple_List
+%type<call> Call
+%type<exprlist> Expr_List Expr_Comma
+%type<atom> Atom
+%type<expr> Expr; 
 %%
 
 /*=============================================
@@ -110,7 +114,7 @@
 ==============================================*/
 
 Program:
-    Func_def {std::cout << $1;}
+    Func_def {std::cout << *$1;}
 ;
 
 Func_def:
@@ -121,14 +125,14 @@ Func_def_dec:
     Func_def Func_def_dec   {$2->append($1); $$ = $2;}
 |   Func_Decl Func_def_dec  {$2->append($1); $$ = $2;}
 |   Var_Def Func_def_dec    {$2->append($1); $$ = $2;}
-|   /*ε*/                   {$$ = new FunctionDefinitionList()}
+|   /*ε*/                   {$$ = new FunctionDefinitionList();}
 ;
 
 Header:
-    Type T_id '(' ')'               {$$ = new Header($1, $2, (FormalList *) NULL);}
-|   Type T_id '(' Formal Par ')'    {$5->append($4); $$ = new Header($1, $2, $5);}
-|   T_id '('')'                     {$$ = new Header((Type *) NULL, $1, (FormalList *) NULL);}
-|   T_id '(' Formal Par ')'         {$4->append($3); $$ = new Header((Type *) NULL, $1, $4);}
+    Type T_id '(' ')'               {$$ = new Header($1, new Id(std::string($2)), NULL);}
+|   Type T_id '(' Formal Par ')'    {$5->append($4); $$ = new Header($1, new Id(std::string($2)), $5);}
+|   T_id '('')'                     {$$ = new Header(NULL, new Id(std::string($1)),  NULL);}
+|   T_id '(' Formal Par ')'         {$4->append($3); $$ = new Header(NULL, new Id(std::string($1)), $4);}
 ;
 
 
@@ -136,22 +140,21 @@ Func_Decl:
     "decl" Header {$$ = new FunctionDeclaration($2);}
 ;
 
-Par:
-|   ';' Formal Par {$3->append($2); $$ = $3;}
-|   /*e*/ {$$ = new FormalList();}
+Par:   ';' Formal Par  {$3->append($2); $$ = $3;}
+|   /*e*/           {$$ = new FormalList();}
 ;
 
 Formal:
-    "ref" Var_Def {$$ = new Formal($1, true);}
-|   Var_Def {$$ = new Formal($1, false);}
+    "ref" Var_Def   {$$ = new Formal($2, true);}
+|   Var_Def         {$$ = new Formal($1, false);}
 ;
 
 
-Var_Def: Type T_id Var_Comma {$3->append($2); $3->set_type($1); $$ = $3;}
+Var_Def: Type T_id Var_Comma {$3->append(new Id(std::string($2))); $3->set_type($1); $$ = $3;}
 
 Var_Comma:
-    /* e*/  {$$ = new VarList()}
-|   ',' T_id Var_Comma {} {$3->append($2); $$ = $3;}
+    /* e*/  {$$ = new VarList();}
+|   ',' T_id Var_Comma {} {$3->append(new Id(std::string($2))); $$ = $3;}
 ;
 
 Type:
@@ -166,7 +169,7 @@ Type:
 
 
 Stmt:
-    Simple {$$ = $1}  
+    Simple {$$ = $1;}  
 |   "exit"  {$$ = new Exit();}
 |   "return" Expr  {$$ = new Return($2);}
 |   If_Clause {$$=$1;}
@@ -187,7 +190,7 @@ If_Clause   :
 ;
 
 
-Elsif_Clause : "elsif" Expr ':' Stmt_Body Elsif_Clause {$1->append($2, $4);}
+Elsif_Clause : "elsif" Expr ':' Stmt_Body Elsif_Clause {$5->append($2, $4);}
 | /*e*/ {$$ = new Elsif();}
 ;
 
@@ -195,13 +198,13 @@ Else_Clause:  "else" ':' Stmt_Body {$$ = new Else($3);}
 | /*e*/ {$$ = new Else();}
 ;
 
-For_Clause: "for" Simple_List ';' Expr ';' Simple_List ':' Stmt_Body "end" {$$ = new For($2, $4, $6, $8)}
+For_Clause: "for" Simple_List ';' Expr ';' Simple_List ':' Stmt_Body "end" {$$ = new For($2, $4, $6, $8);}
 ;
 
 Simple:
     "skip"                                  {$$ = new Skip(); }
-|   Atom ":=" Expr                          {$$ = new Assign($1, $3) }  
-|   Call                                    {$$ = $1 }
+|   Atom ":=" Expr                          {$$ = new Assign($1, $3); }  
+|   Call                                    {$$ = $1 ;}
 ;
 
 
@@ -217,8 +220,8 @@ Simple_Comma:
 ;
 
 Call:
-    {cout << "FunctionCall{ ";} T_id  '(' ')'                  {$$ = new FunctionCall($1);}
-|   {cout << "FunctionCall{ ";} T_id  '(' Expr_List ')' { }    {$$ = new FunctionCall($1, $3);}
+    T_id  '(' ')'                  {$$ = new FunctionCall(new Id(std::string($1)));}
+|   T_id  '(' Expr_List ')' { }    {$$ = new FunctionCall(new Id(std::string($1)), $3);}
 ;
 
 Expr_List: Expr  Expr_Comma    { $2->append($1); $$ = $2;}
@@ -230,7 +233,7 @@ Expr_Comma:
 ;
 
 Atom:
-    T_id         {$$ = new Id(std::string($1));  }
+    T_id         {$$ = new Id(std::string($1));}
 |   T_string     {$$ = new StringLiteral(std::string($1)); }
 |   Atom '[' Expr ']'   {$$ = new Array($1, $3);}
 |   Call                {$$ = $1;}
@@ -238,11 +241,7 @@ Atom:
 
 Expr:
     Atom      {$$ = $1;}       
-|   RValue     {$$ = $1;} 
-;
-
-RValue:
-        T_const        { $$ = new IntConst($1); }
+    |   T_const        { $$ = new IntConst($1); }
     |   T_singlechar   { $$ = new CharConst($1); }
     |   '(' Expr ')'     {$$ = $2;}
     |   '+' Expr   %prec UPLUS  { $$ = new UnOp(std::string("+"), $2);  }
@@ -250,7 +249,7 @@ RValue:
     |   "nil?" '(' Expr ')'     {$$ = new UnOp(std::string("nil?"), $3); }
     |   "head" '(' Expr ')'     {$$ = new UnOp(std::string("head"), $3); }
     |   "tail" '(' Expr ')'     {$$ = new UnOp(std::string("tail"), $3); }
-    |   "not" Expr              {$$ = new UnOp($1, std::string("not"), $2); }
+    |   "not" Expr              {$$ = new UnOp(std::string("not"), $2); }
     |   Expr '+' Expr    {$$ = new BinOp($1, std::string("+"), $3); }
     |   Expr '-' Expr    {$$ = new BinOp($1, std::string("-"), $3);  }
     |   Expr '*' Expr    {$$ = new BinOp($1, std::string("*"), $3); }
@@ -269,10 +268,10 @@ RValue:
     |   "false"          {$$ = new Boolean(std::string("false"));}
     |   "new" Type '[' Expr ']' {$$ = new New($2, $4);}
     |   "nil"            {$$ = new Nil();}
-    ;
+;
 
 %%
 
 int main(){
-  int result = yyparse();
+    int result = yyparse();
 }

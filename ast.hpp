@@ -31,9 +31,6 @@ class Stmt: virtual public AST {
 class Atom: public Expr { 
 };
 
-class RValue: public Expr {  
-};
-
 class Simple: public Stmt {  
 };
 
@@ -142,7 +139,7 @@ private:
 
 
 // Done
-class CharConst: public RValue {
+class CharConst: public Expr {
 public:
   CharConst(char c): char_const(c) {}
   virtual void printOn(std::ostream &out) const override {
@@ -157,7 +154,7 @@ private:
 };
 
 // Done
-class IntConst: public RValue {
+class IntConst: public Expr {
 public:
   IntConst(int n): num(n) {}
   virtual void printOn(std::ostream &out) const override {
@@ -172,7 +169,7 @@ private:
 };
 
 // Done
-class New: public RValue {
+class New: public Expr {
 public:
   New(Type *t, Expr *right): typ(t), expr(right){}
   ~New() {delete expr;}
@@ -191,7 +188,7 @@ private:
 
 
 
-class Nil: public RValue {
+class Nil: public Expr {
 public:
   Nil() {}
   virtual void printOn(std::ostream &out) const override {
@@ -203,7 +200,7 @@ public:
 };
 
 // Done
-class Boolean: public RValue {
+class Boolean: public Expr {
 public:
   Boolean(std::string b): boo(b) {} //wink wink pap
   virtual void printOn(std::ostream &out) const override {
@@ -222,7 +219,7 @@ private:
 };
 
 // Done
-class BinOp: public RValue {
+class BinOp: public Expr {
 public:
   BinOp(Expr *l, std::string o, Expr *r): left(l), op(o), right(r) {}
   ~BinOp() { delete left; delete right; }
@@ -271,7 +268,7 @@ private:
 };
 
 // Done
-class UnOp: public RValue {
+class UnOp: public Expr {
 public:
   UnOp(std::string(o), Expr *r): op(o), right(r) {}
   ~UnOp() { delete right; }
@@ -765,7 +762,6 @@ private:
   bool hasParams;
 };
 
-
 class FunctionDeclaration: public AST {
 public:
   FunctionDeclaration(Header *hd): header(hd){}
@@ -780,7 +776,6 @@ public:
 private:
   Header *header;
 };
-
 
 class FunctionDefinitionList: public AST {
 public:
@@ -805,8 +800,6 @@ public:
 private:
   std::vector<AST *> definitions;
 };
-
-
 
 class FunctionDefinition: public AST {
 public:

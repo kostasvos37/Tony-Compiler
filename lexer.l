@@ -1,130 +1,81 @@
-%option noyywrap
-%option yylineno
-%x COMMENT
-
 %{
-#include "ast.hpp"
 #include <cstdio>
 #include <cstdlib>
+#include "ast.hpp"
 #include "lexer.hpp"
 #include "parser.hpp"
-%}
 
-%{
-#define T_eof 0
-#define T_id 1001 
-#define T_and 1002
-#define T_bool 1003
-#define T_char 1004
-#define T_decl 1005
-#define T_def 1006
-#define T_else 1007
-#define T_elseif 1008
-#define T_end 1009
-#define T_exit 1010
-#define T_false 1011
-#define T_for 1012
-#define T_head 1013
-#define T_if 1014
-#define T_int 1015
-#define T_list 1016
-#define T_mod 1017
-#define T_new 1018
-#define T_nil 1019
-#define T_nil2 1020
-#define T_not 1021
-#define T_or 1022
-#define T_ref 1023
-#define T_return 1024
-#define T_skip 1025
-#define T_tail 1026
-#define T_true 1027
-#define T_const 1028
-#define T_singlechar 1029
-#define T_string 1030
-#define T_operator 1031
-#define T_seperator 1032
-
-
-void ERROR (const char msg []);
+int comment_counter = 0;
+int linecount=1;
+/*
+    L -> Letters
+    D -> Digits
+    W -> White characaters
+    E -> Escape characaters
+    O -> Operators
+    S -> Seperators
+    P -> Printable characters
+*/
 %}
 
 L [a-zA-Z]
 D [0-9]
-W [ \r\t\n]
+W [ \r\t]
 E [ntr0'"\\]|[x][0-9A-F][0-9A-F]
-O [\+\-\*\/\#\=\<\>]|"<>"|"<="|">="
-S [\(\)\[\]\,\;\:]|":="
+O [\+\-\*\/\#\=\<\>]
+S [\(\)\[\]\,\;\:]
 P [\x20-\x7e]
 
-%%
-    int comment_counter = 0;
+%option noyywrap
+%option yylineno
+%x COMMENT
 
-"and" {yylval.op[0]='a'; yylval.op[1]='n'; yylval.op[2]='d'; yylval.op[3]='\0';  return T_and;}
+%%
+"and" { return T_and;}
 "bool" {return T_bool;}
 "char" {return T_char;}
 "decl" {return T_decl;}
 "def" {return T_def;}
 "else" {return T_else;}
-"elseif" {return T_elseif;}
+"elseif" {return T_elsif;}
 "end" {return T_end;}
 "exit" {return T_exit;}
-"false" {yylval.b= false; return T_false;}
+"false" {return T_false;}
 "for" {return T_for;}
 "head" {return T_head;}
 "if" {return T_if;}
 "int" {return T_int;}
 "list" {return T_list;}
-"mod" {yylval.op[0]='m'; yylval.op[1]='o'; yylval.op[2]='d'; yylval.op[3]='\0'; return T_mod;}
+"mod" { return T_mod;}
 "new" {return T_new;}
 "nil" {return T_nil;}
 "nil?" {return T_nil2;}
-"not" {yylval.op[0]='n'; yylval.op[1]='o'; yylval.op[2]='t'; yylval.op[3]='\0';return T_not;}
-"or" {yylval.op[0]='o'; yylval.op[1]='r'; yylval.op[2]='\0'; return T_or;}
+"not" {return T_not;}
+"or" {return T_or;}
 "ref" {return T_ref;}
 "return" {return T_return;}
 "skip" {return T_skip;}
 "tail" {return T_tail;}
-"true" {yylval.b= true; return T_true;}
+"true" {return T_true;}
 
 
-{D}* {yylval.num = atoi(yytext); return T_const;}
+{D}+ {yylval.num=std::stoi(yytext); return T_const;}
 
-{O}  {
-    int i;
-    for(i=0; yytext[i]!='\0';i++)
-        yylval.op[i] = yytext[i];
-    
-    yylval.op[i] = '\0';
-    
-    return T_operator;}
+{O}  {return yytext[0];}
+"<="				{ return T_le;	}
+">="				{ return T_ge;}
+"<>"				{ return T_ne;}
 
-{S}  {
-    int i;
-    for(i=0; yytext[i]!='\0';i++)
-        yylval.sep[i] = yytext[i];
-    
-    yylval.sep[i] = '\0';
-    
-    return T_seperator;}
+{S}            {return yytext[0];}
+":="				{ return T_assign;	}
 
-{L}+({L}|{D}|"_"|"?")* {
-    int i;
-    for(i=0; yytext[i]!='\0';i++)
-        yylval.name[i] = yytext[i];
-    
-    yylval.name[i] = '\0';
-    return T_id;} 
+{L}({L}|{D}|"_"|"?")* {yylval.name=yytext; return T_id;} 
 
-"'"([\x20-\x26\x28-\x7e]|\\{E})"'" {yylval.c=yytext[1]; return T_singlechar;}
+"'"([\x20-\x26\x28-\x7e]|\\{E})"'" {yylval.c=yytext[0]; return T_singlechar;}
 
-\"([\x20-\x21\x23-\x7e]|\\\")*\" {
-    int i;
-    for(i=1;yytext[i] != '"';i++) yylval.str[i-1] = yytext[i];
-    yylval.str[i-1] = '\0';    
-    return T_string;}
+\"([\x20-\x21\x23-\x7e]|\\\")*\" {yylval.name=yytext; return T_string;}
 
-\\\%.*\x0a { /* One line comments */ }
+%[^\n]*\n			{ /* nothing */ linecount++; }
 
 \<\* { BEGIN(COMMENT); }
 <COMMENT>\<\* {++comment_counter;}
@@ -132,29 +83,16 @@ P [\x20-\x7e]
                 else BEGIN(INITIAL);}
 
 <COMMENT>[^\n]          {/* do nothing */}
-<COMMENT>\n             {/* change line | do nothing */}
-
-{W}+    { /* nothing */ }
+<COMMENT>\n             {/* change line | do nothing */ linecount++; }
+{W}+         { /* nothing */ }
+\n			{ linecount++;}
 
 . {yyerror("Error at line "); exit (1);}
 
-
-
 %%
 
+//TODO : Fix to add lines
 void yyerror(const char *msg) {
   fprintf(stderr, "%s\n", msg);
   exit(1);
-}
-
-int main ()
-{
-    int token;
-    do 
-    {
-        token = yylex();
-        printf("token=%d, lexeme=\"%s\"\n", token, yytext);
-    } 
-    while (token != T_eof);
-return 0;
 }

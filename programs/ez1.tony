@@ -1,0 +1,3 @@
+def putc():
+  arr := 5
+end
