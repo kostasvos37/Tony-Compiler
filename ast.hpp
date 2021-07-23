@@ -97,12 +97,12 @@ private:
 
 class CharConst: public Expr {
 public:
-  CharConst(char c): char_const(c) {}
+  CharConst(unsigned char c): char_const(c) {}
   virtual void printOn(std::ostream &out) const override {
-    out << "<CharConst value='" << char_const << "'> ";
+    out << "<CharConst value='"<< char_const << "\' ascii="<< (int) char_const << "> ";
   }
 private:
-  char char_const;
+  unsigned char char_const;
 };
 
 
@@ -347,6 +347,12 @@ public:
   void append(Expr* e, StmtBody* s) {
     elsif_conds.push_back(e);
     elsif_stmt_bodies.push_back(s);
+  }
+
+    virtual void printOn(std::ostream &out) const override {
+    // This is never used
+    out << "<Elsif> </Elsif>";
+    
   }
 
 private:

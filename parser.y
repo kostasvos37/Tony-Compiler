@@ -48,7 +48,7 @@
 %union {
     char *name;
     int num;
-    char c;
+    unsigned char c;
 
     Expr *expr;
     Atom *atom;

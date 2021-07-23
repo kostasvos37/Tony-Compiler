@@ -7,6 +7,8 @@
 
 int comment_counter = 0;
 int linecount=1;
+unsigned char fixSingleChar(char *str);
+
 /*
     L -> Letters
     D -> Digits
@@ -21,7 +23,7 @@ int linecount=1;
 L [a-zA-Z]
 D [0-9]
 W [ \r\t]
-E [ntr0'"\\]|[x][0-9A-F][0-9A-F]
+E [ntr0'"\\]|[x][0-9a-f][0-9a-f]
 O [\+\-\*\/\#\=\<\>]
 S [\(\)\[\]\,\;\:]
 P [\x20-\x7e]
@@ -71,9 +73,17 @@ P [\x20-\x7e]
 
 {L}({L}|{D}|"_"|"?")*              {yylval.name=strdup(yytext); return T_id;} 
 
-"'"([\x20-\x26\x28-\x7e]|\\{E})"'" {yylval.c=yytext[0]; return T_singlechar;}
+"'"([\x20-\x26\x28-\x7e]|\\{E})"'" {
+  
+  
 
-\"([\x20-\x21\x23-\x7e]|\\\")*\"   {yylval.name=strdup(yytext); return T_string;}
+  yylval.c=fixSingleChar(yytext); return T_singlechar;}
+
+\"([\x20-\x21\x23-\x7e]|\\\")*\"   {
+                                char *str = yytext; 
+                                str++; 
+                                str[strlen(str)-1] = '\0';
+                                yylval.name=strdup(str); return T_string;}
 
 %[^\n]*\n			    {linecount++;}
 
@@ -85,14 +95,40 @@ P [\x20-\x7e]
 <COMMENT>[^\n]          {/* nothing */}
 <COMMENT>\n             {linecount++;}
 {W}+                    {/* nothing */ }
-\n			            {linecount++;}
+\n			                {linecount++;}
 
-.                       {yyerror("Error at line "); exit (1);}
+.                       {char msg[50]; sprintf(msg, "Lexer error: Unexpected token at line %d\n", linecount); yyerror(msg); exit (1);}
 
 %%
 
 //TODO: Fix to add lines
 void yyerror(const char *msg) {
-  fprintf(stderr, "%s\n", msg);
+  fprintf(stderr, "%s", msg);
   exit(1);
+}
+
+unsigned char fixSingleChar(char *str){ 
+  
+  str++;
+  str[strlen(str)-1] = '\0';
+  printf("%s", str);
+  if(str[0] != '\\') return (unsigned char) str[0];
+  str++;
+  unsigned char x;
+  switch(str[0]){
+    case 'n': return '\n';
+    case 't': return '\t';
+    case 'r': return '\r';
+    case '0': return '\0';
+    case '\\': return '\\';
+    case '\'': return '\'';
+    case '\"': return '\"';
+    case 'x': str++; x = (unsigned char) strtol(str, NULL, 16); return x; break;
+    default : 
+      char msg[50]; 
+      sprintf(msg, "Lexer error: Unexpected token at line %d\n", linecount); 
+      yyerror(msg); 
+      exit (1);
+      break;
+  }
 }
