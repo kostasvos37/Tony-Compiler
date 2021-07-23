@@ -38,7 +38,7 @@ class Simple: public Stmt {
 };
 
 
-class Type: public AST{
+class Type: public AST {
 public:
   Type(std::string str): type(str), hasSubtype(false){}
   Type(std::string str, Type * typ): type(str), hasSubtype(true), subtype(typ){}
@@ -349,18 +349,6 @@ public:
     elsif_stmt_bodies.push_back(s);
   }
 
-  virtual void printOn(std::ostream &out) const override {
-    
-    // This is never used
-    if(!elsif_conds.empty()){
-      out << "<Elsif> ";
-      for(int i=0; i< (int) elsif_stmt_bodies.size(); i++){
-        out << "( " << *elsif_conds[i] << ", " << *elsif_stmt_bodies[i] << ")";
-      }
-      out << ")\n";
-    }
-  }
-
 private:
   std::vector<Expr *> elsif_conds;
   std::vector<StmtBody *> elsif_stmt_bodies;
@@ -399,20 +387,20 @@ private:
 
 class If: public Stmt {
 public:
-  If(Expr *e, StmtBody *b, Elsif * ei, Else *el){
-    conditions.push_back(e);
-    statements.push_back(b);
+  If(Expr *if_condition, StmtBody *if_stmt_body, Elsif * elsif_stmt, Else *else_stmt){
+    conditions.push_back(if_condition);
+    statements.push_back(if_stmt_body);
     
-    std::vector<Expr *> elsif_conds = ei->get_conds();
-    std::vector<StmtBody *> elsif_stmt_bodies = ei->get_stmt_bodies();
-    for(int i=0; i< (int) elsif_conds.size();i++){
+    std::vector<Expr *> elsif_conds = elsif_stmt->get_conds();
+    std::vector<StmtBody *> elsif_stmt_bodies = elsif_stmt->get_stmt_bodies();
+    for(int i=0; i < (int) elsif_conds.size(); i++){
       conditions.push_back(elsif_conds[i]);
       statements.push_back(elsif_stmt_bodies[i]);
     }
 
-    if(!el->isEmpty()){
+    if(!else_stmt->isEmpty()) {
       conditions.push_back(new Boolean("true"));
-      statements.push_back(el->get_stmt());
+      statements.push_back(else_stmt->get_stmt());
       hasElse=true;
     }
   }
@@ -423,16 +411,17 @@ public:
 
   virtual void printOn(std::ostream &out) const override {
     out << "\n<If>\n";
-
     out << *conditions[0] << *statements[0];
-    int size=(int) conditions.size();
-    if(hasElse){
-      for (int i=1; i< (size-1);i++) {
+
+    int size = (int) conditions.size();
+
+    if(hasElse) {
+      for (int i=1; i<(size-1); i++) {
         out << "\n<ElsIf>\n" << *conditions[i] << *statements[i] << "\n</ElsIf>\n";
       }
       out << "\n<Else>\n" << *conditions[size-1] << *statements[size-1] << "\n</Else>\n";
-    }else{
-      for (int i=1; i< (size);i++) {
+    } else {
+      for (int i=1; i<size; i++) {
         out << "\n<ElsIf>\n" << *conditions[i] << *statements[i] << "\n</ElsIf>\n";
       }
     }
@@ -440,7 +429,7 @@ public:
   }
 
 private:
-  std::vector<Expr *> conditions;
+  std::vector<Expr *>     conditions;
   std::vector<StmtBody *> statements;
   bool hasElse = false;
 };
