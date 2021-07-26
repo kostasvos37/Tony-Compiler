@@ -58,7 +58,7 @@
     Simple *simple;
     Stmt *stmt;
     StmtBody *stmtbody;
-    Type *type;
+    Type type;
     VarList *varlist;
     Formal *formal;
     FormalList *formallist;
@@ -121,8 +121,8 @@ Func_def_dec:
 Header:
     Type T_id '(' ')'               {$$ = new Header($1, new Id(std::string($2)), NULL);}
 |   Type T_id '(' Formal Par ')'    {$5->append($4); $$ = new Header($1, new Id(std::string($2)), $5);}
-|   T_id '('')'                     {$$ = new Header(NULL, new Id(std::string($1)),  NULL);}
-|   T_id '(' Formal Par ')'         {$4->append($3); $$ = new Header(NULL, new Id(std::string($1)), $4);}
+|   T_id '('')'                     {$$ = new Header(new Id(std::string($1)),  NULL);}
+|   T_id '(' Formal Par ')'         {$4->append($3); $$ = new Header(new Id(std::string($1)), $4);}
 ;
 
 Func_Decl:
@@ -149,11 +149,11 @@ Var_Comma:
 ;
 
 Type:
-    "int"   {$$ = new Type(std::string("int"));}
-|   "char"  {$$ = new Type(std::string("char"));}
-|   "bool"  {$$ = new Type(std::string("bool"));}
-|   Type '[' ']'        {$$ = new Type(std::string("array"), $1);}
-|   "list" '[' Type ']' {$$ = new Type(std::string("list"), $3);}
+    "int"   {$$ = TYPE_int;}
+|   "char"  {$$ = TYPE_char;}
+|   "bool"  {$$ = TYPE_bool;}
+|   Type '[' ']'        {$$ = TYPE_array;}
+|   "list" '[' Type ']' {$$ = TYPE_list;}
 ;
 
 Stmt:

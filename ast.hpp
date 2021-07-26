@@ -7,7 +7,7 @@
 #include <map>
 #include <vector>
 #include <string>
-
+#include "symbol.hpp"
 
 class AST{
 public:
@@ -17,6 +17,19 @@ public:
 
 inline std::ostream& operator<< (std::ostream &out, const AST &t) {
   t.printOn(out);
+  return out;
+}
+
+inline std::ostream& operator<< (std::ostream &out, Type t) {
+  switch (t)
+  {
+  case TYPE_int: out << "<Type type=\"int\">"; break;
+  case TYPE_bool: out << "<Type type=\"bool\">"; break;
+  case TYPE_char: out << "<Type type=\"char\">"; break;
+  case TYPE_array: out << "<Type type=\"array\">"; break;
+  case TYPE_list: out << "<Type type=\"list\">"; break;
+  default: out << "<Type type=\"invalid\">"; break;
+  }
   return out;
 }
 
@@ -34,29 +47,6 @@ class Atom: public Expr {
 
 
 class Simple: public Stmt {  
-};
-
-
-class Type: public AST {
-public:
-  Type(std::string str): type(str), hasSubtype(false){}
-  Type(std::string str, Type * typ): type(str), hasSubtype(true), subtype(typ){}
-  ~Type(){
-    if(hasSubtype) delete subtype;
-  }
-
-  virtual void printOn(std::ostream &out) const override {
-    out << " <Type> " << type;
-    if (hasSubtype){
-      out << *subtype;
-    }
-    out << " </Type> ";
-
-  }
-private:
-  std::string type;
-  bool hasSubtype;
-  Type * subtype;
 };
 
 
@@ -118,13 +108,13 @@ private:
 
 class New: public Expr {
 public:
-  New(Type *t, Expr *right): typ(t), expr(right){}
+  New(Type t, Expr *right): typ(t), expr(right){}
   ~New() {delete expr;}
   virtual void printOn(std::ostream &out) const override {
-    out << "<New> " << *typ << *expr << "</New> ";
+    out << "<New> " << typ << *expr << "</New> ";
   }
 private:
-  Type *typ;
+  Type typ;
   Expr *expr;
 };
 
@@ -185,13 +175,13 @@ public:
   void append(Id * id) {
     ids.push_back(id);
   }
-  void set_type(Type *t){
+  void set_type(Type t){
     type = t;
   }
 
   virtual void printOn(std::ostream &out) const override {
     out << "\n<VarList>\n";
-    out << *type;
+    out << type;
     for (Id * i : ids) {
       out << *i;
     }
@@ -199,7 +189,7 @@ public:
   }
 private:
   std::vector<Id *> ids;
-  Type * type;
+  Type type;
 };
 
 
@@ -241,13 +231,14 @@ private:
 
 class Header: public AST {
 public:
-  Header(Type *t, Id *name, FormalList *f): type(t), formals(f), id(name) {}
+  Header(Type t, Id *name, FormalList *f): type(t), formals(f), id(name), isTyped(true) {}
+  Header(Id *name, FormalList *f): formals(f), id(name), isTyped(false) {}
   virtual void printOn(std::ostream &out) const override {
     out << "<Header>\n"; 
-    if(!type) {
+    if(!isTyped) {
       out << "<NoType>";
     } else {
-      out << *type;
+      out << type;
     }
     out << *id; 
     if(!formals) {
@@ -258,9 +249,10 @@ public:
     out << "\n</Header>\n";
   }
 private:
-  Type *type;
+  Type type;
   FormalList* formals;
   Id *id;
+  bool isTyped;
 };
 
 
