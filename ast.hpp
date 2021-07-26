@@ -242,18 +242,18 @@ private:
 
 class Header: public AST {
 public:
-  Header(Type *t, Id *i, FormalList *f): type(t), formals(f), id(i) {}
+  Header(Type *t, Id *name, FormalList *f): type(t), formals(f), id(name) {}
   virtual void printOn(std::ostream &out) const override {
     out << "<Header>\n"; 
-    if(type == NULL){
+    if(!type) {
       out << "<NoType>";
-    }else{
+    } else {
       out << *type;
     }
     out << *id; 
-    if(formals == NULL){
+    if(!formals) {
       out << "<NoFormalList>";
-    }else{
+    } else {
       out << *formals;
     }
     out << "\n</Header>\n";

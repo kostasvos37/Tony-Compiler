@@ -1,0 +1,4 @@
+def my_function():
+  if limit >= 2: counter := counter + 1 variable_that_shouldnt_be_here
+  end
+end
