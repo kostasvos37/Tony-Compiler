@@ -21,12 +21,11 @@ inline std::ostream& operator<< (std::ostream &out, const AST &t) {
 }
 
 
-// Virtual to avoid "diamond of death"
-class Expr: virtual public AST {
+class Expr: public AST {
 };
 
 
-class Stmt: virtual public AST {
+class Stmt: public AST {
 };
 
 
