@@ -23,12 +23,12 @@ inline std::ostream& operator<< (std::ostream &out, const AST &t) {
 inline std::ostream& operator<< (std::ostream &out, Type t) {
   switch (t)
   {
-  case TYPE_int: out << "<Type type=\"int\">"; break;
-  case TYPE_bool: out << "<Type type=\"bool\">"; break;
-  case TYPE_char: out << "<Type type=\"char\">"; break;
-  case TYPE_array: out << "<Type type=\"array\">"; break;
-  case TYPE_list: out << "<Type type=\"list\">"; break;
-  default: out << "<Type type=\"invalid\">"; break;
+    case TYPE_int: out << "<Type type=\"int\">"; break;
+    case TYPE_bool: out << "<Type type=\"bool\">"; break;
+    case TYPE_char: out << "<Type type=\"char\">"; break;
+    case TYPE_array: out << "<Type type=\"array\">"; break;
+    case TYPE_list: out << "<Type type=\"list\">"; break;
+    default: out << "<Type type=\"invalid\">"; break;
   }
   return out;
 }
