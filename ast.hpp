@@ -64,6 +64,7 @@ private:
 class Array: public Atom {
 public:
   Array(Atom *a, Expr *e): atom(a), expr(e) {}
+  ~Array() {delete atom; delete expr;}
   virtual void printOn(std::ostream &out) const override {
     out << "\n<Array>\n" << *atom << "\n" << *expr << "\n</Array>\n";
   }
@@ -196,7 +197,8 @@ private:
 class Formal: public AST {
 public:
   Formal(VarList* v, bool isref): varlist(v), isRef(isref) {}
-virtual void printOn(std::ostream &out) const override {
+  ~Formal() {delete varlist;}
+  virtual void printOn(std::ostream &out) const override {
     out << "\n<Formal isRef=\"" << (isRef ? "yes" : "no") << "\">\n" << *varlist << "</Formal>";
   }
 private:
@@ -233,6 +235,7 @@ class Header: public AST {
 public:
   Header(Type t, Id *name, FormalList *f): type(t), formals(f), id(name), isTyped(true) {}
   Header(Id *name, FormalList *f): formals(f), id(name), isTyped(false) {}
+  ~Header(){ delete formals; delete id;}
   virtual void printOn(std::ostream &out) const override {
     out << "<Header>\n"; 
     if(!isTyped) {
@@ -259,6 +262,7 @@ private:
 class Return: public Stmt{
 public:
   Return(Expr* e): ret_expr(e) {}
+  ~Return() {delete ret_expr;}
   virtual void printOn(std::ostream &out) const override {
     out << "\n<Return>\n" << *ret_expr << "\n</Return>\n";
   }
@@ -300,6 +304,7 @@ private:
 class Assign: public Simple{
 public:
   Assign(Atom *a, Expr *e): atom(a), expr(e) {}
+  ~Assign() {delete atom; delete expr;}
   virtual void printOn(std::ostream &out) const override {
     out << "\n<Assign>\n" << *atom << *expr << "\n</Assign>\n";
   }
@@ -330,6 +335,11 @@ public:
   }
   std::vector<StmtBody *> get_stmt_bodies() {
     return elsif_stmt_bodies;
+  }
+
+  void clear(){
+    elsif_conds.clear();
+    elsif_stmt_bodies.clear();
   }
 
   bool isEmpty(){
@@ -365,6 +375,10 @@ public:
     return else_stmt[0]; 
   }
 
+  void clear(){
+    else_stmt.clear();
+  }
+
   bool isEmpty(){
     return else_stmt.empty();
   }
@@ -388,6 +402,7 @@ public:
     conditions.push_back(if_condition);
     statements.push_back(if_stmt_body);
     
+    std::cout << "Creating if";
     std::vector<Expr *> elsif_conds = elsif_stmt->get_conds();
     std::vector<StmtBody *> elsif_stmt_bodies = elsif_stmt->get_stmt_bodies();
     for(int i=0; i < (int) elsif_conds.size(); i++){
@@ -504,6 +519,7 @@ class FunctionCall: public Simple, public Atom {
 public:
   FunctionCall(Id *n): name(n), hasParams(false) {}
   FunctionCall(Id *n, ExprList *el): name(n), params(el), hasParams(true) {}
+  ~FunctionCall() {delete name; if (hasParams) delete params;}
   virtual void printOn(std::ostream &out) const override {
     if(!hasParams)
       out << "\n<FunctionCall>\n" << *name << "\n</FunctionCall>\n";
