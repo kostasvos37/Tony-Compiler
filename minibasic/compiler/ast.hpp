@@ -1,13 +1,27 @@
-#pragma once
+#ifndef __AST_HPP__
+#define __AST_HPP__
 
 #include <iostream>
 #include <map>
 #include <vector>
 
+#include "symbol.hpp"
+
+void yyerror(const char *msg);
+
+inline std::ostream& operator<<(std::ostream &out, Type t) {
+  switch (t) {
+    case TYPE_int: out << "int"; break;
+    case TYPE_bool: out << "bool"; break;
+  }
+  return out;
+}
+
 class AST {
 public:
   virtual ~AST() {}
   virtual void printOn(std::ostream &out) const = 0;
+  virtual void sem() {}
 };
 
 inline std::ostream& operator<< (std::ostream &out, const AST &t) {
@@ -17,27 +31,39 @@ inline std::ostream& operator<< (std::ostream &out, const AST &t) {
 
 class Expr: public AST {
 public:
-  virtual void compile() const = 0;
+  virtual int eval() const = 0;
+  void type_check(Type t) {
+    sem();
+    if (type != t) yyerror("Type mismatch");
+  }
+protected:
+  Type type;
 };
 
 class Stmt: public AST {
 public:
-  virtual void compile() const = 0;
+  virtual void run() const = 0;
 };
 
-extern std::map<char, int> globals;
+extern std::vector<int> rt_stack;
 
 class Id: public Expr {
 public:
-  Id(char v): var(v) {}
+  Id(char v): var(v), offset(-1) {}
   virtual void printOn(std::ostream &out) const override {
-    out << "Id(" << var << ")";
+    out << "Id(" << var << "@" << offset << ")";
   }
-  virtual void compile() const override {
-    printf("  pushl %d(%%edi)\n", 4 * (var - 'a'));
+  virtual int eval() const override {
+    return rt_stack[offset];
+  }
+  virtual void sem() override {
+    SymbolEntry *e = st.lookup(var);
+    type = e->type;
+    offset = e->offset;
   }
 private:
   char var;
+  int offset;
 };
 
 class Const: public Expr {
@@ -46,8 +72,11 @@ public:
   virtual void printOn(std::ostream &out) const override {
     out << "Const(" << num << ")";
   }
-  virtual void compile() const override {
-    printf("  pushl $%d\n", num);
+  virtual int eval() const override {
+    return num;
+  }
+  virtual void sem() override {
+    type = TYPE_int;
   }
 private:
   int num;
@@ -60,34 +89,27 @@ public:
   virtual void printOn(std::ostream &out) const override {
     out << op << "(" << *left << ", " << *right << ")";
   }
-  virtual void compile() const override {
-    left->compile();
-    right->compile();
-    printf("  popl %%ebx\n");
-    printf("  popl %%eax\n");
+  virtual int eval() const override {
     switch (op) {
-      case '+':
-        printf("  addl %%ebx, %%eax\n");
-        printf("  pushl %%eax\n");
-        break;
-      case '-':
-        printf("  subl %%ebx, %%eax\n");
-        printf("  pushl %%eax\n");
-        break;
-      case '*':
-        printf("  mull %%ebx\n");
-        printf("  pushl %%eax\n");
-        break;
-      case '/':
-        printf("  cdq\n");
-        printf("  divl %%ebx\n");
-        printf("  pushl %%eax\n");
-        break;
-      case '%':
-        printf("  cdq\n");
-        printf("  divl %%ebx\n");
-        printf("  pushl %%edx\n");
-        break;
+      case '+': return left->eval() + right->eval();
+      case '-': return left->eval() - right->eval();
+      case '*': return left->eval() * right->eval();
+      case '/': return left->eval() / right->eval();
+      case '%': return left->eval() % right->eval();
+      case '=': return left->eval() == right->eval();
+      case '<': return left->eval() < right->eval();
+      case '>': return left->eval() > right->eval();
+    }
+    return 0;  // this will never be reached.
+  }
+  virtual void sem() override {
+    left->type_check(TYPE_int);
+    right->type_check(TYPE_int);
+    switch (op) {
+      case '+': case '-': case '*': case '/': case '%':
+        type = TYPE_int; break;
+      case '=': case '<': case '>':
+        type = TYPE_bool; break;
     }
   }
 private:
@@ -98,18 +120,22 @@ private:
 
 class Let: public Stmt {
 public:
-  Let(char v, Expr *e): var(v), expr(e) {}
+  Let(char v, Expr *e): var(v), offset(-1), expr(e) {}
   ~Let() { delete expr; }
   virtual void printOn(std::ostream &out) const override {
     out << "Let(" << var << " = " << *expr << ")";
   }
-  virtual void compile() const override {
-    expr->compile();
-    printf("  popl %%eax\n");
-    printf("  movl %%eax, %d(%%edi)\n", 4 * (var - 'a'));
+  virtual void run() const override {
+    rt_stack[offset] = expr->eval();
+  }
+  virtual void sem() override {
+    SymbolEntry *lhs = st.lookup(var);
+    expr->type_check(lhs->type);
+    offset = lhs->offset;
   }
 private:
   char var;
+  int offset;
   Expr *expr;
 };
 
@@ -120,18 +146,11 @@ public:
   virtual void printOn(std::ostream &out) const override {
     out << "Print(" << *expr << ")";
   }
-  virtual void compile() const override {
-    printf("  pushl %%edi\n");
-    expr->compile();
-    printf("  subl $8, %%esp\n");
-    printf("  call _writeInteger\n");
-    printf("  addl $12, %%esp\n");
-    printf("  movl $NL, %%eax\n");
-    printf("  pushl %%eax\n");
-    printf("  subl $8, %%esp\n");
-    printf("  call _writeString\n");
-    printf("  addl $12, %%esp\n");
-    printf("  popl %%edi\n");
+  virtual void run() const override {
+    std::cout << expr->eval() << std::endl;
+  }
+  virtual void sem() override {
+    expr->type_check(TYPE_int);
   }
 private:
   Expr *expr;
@@ -147,20 +166,16 @@ public:
     if (stmt2 != nullptr) out << ", " << *stmt2;
     out << ")";
   }
-  virtual void compile() const override {
-    static int counter = 0;
-    cond->compile();
-    printf("  popl %%eax\n");
-    printf("  andl %%eax, %%eax\n");
-    int l_false = counter++;
-    printf("  jz Lif%d\n", l_false);
-    stmt1->compile();
-    int l_end = counter++;
-    printf("  jmp Lif%d\n", l_end);
-    printf("Lif%d:\n", l_false);
-    if (stmt2 != nullptr)
-      stmt2->compile();
-    printf("Lif%d:\n", l_end);
+  virtual void run() const override {
+    if (cond->eval())
+      stmt1->run();
+    else if (stmt2 != nullptr)
+      stmt2->run();
+  }
+  virtual void sem() override {
+    cond->type_check(TYPE_bool);
+    stmt1->sem();
+    if (stmt2 != nullptr) stmt2->sem();
   }
 private:
   Expr *cond;
@@ -175,34 +190,55 @@ public:
   virtual void printOn(std::ostream &out) const override {
     out << "For(" << *expr << ", " << *stmt << ")";
   }
-  virtual void compile() const override {
-    static int counter = 0;
-    expr->compile();
-    int l_loop = counter++;
-    printf("Lfor%d:\n", l_loop);
-    printf("  popl %%eax\n");
-    printf("  cmpl $0, %%eax\n");
-    int l_end = counter++;
-    printf("  jle Lfor%d\n", l_end);
-    printf("  decl %%eax\n");
-    printf("  pushl %%eax\n");
-    stmt->compile();
-    printf("  jmp Lfor%d\n", l_loop);
-    printf("Lfor%d:\n", l_end);
+  virtual void run() const override {
+    for (int times = expr->eval(), i = 0; i < times; ++i)
+      stmt->run();
+  }
+  virtual void sem() override {
+    expr->type_check(TYPE_int);
+    stmt->sem();
   }
 private:
   Expr *expr;
   Stmt *stmt;
 };
 
+class Decl: public AST {
+public:
+  Decl(char c, Type t): var(c), type(t) {}
+  virtual void printOn(std::ostream &out) const override {
+    out << "Decl(" << var << " : " << type << ")";
+  }
+  virtual void sem() override {
+    st.insert(var, type);
+  }
+private:
+  char var;
+  Type type;
+};
+
 class Block: public Stmt {
 public:
-  Block(): stmt_list() {}
-  ~Block() { for (Stmt *s : stmt_list) delete s; }
-  void append(Stmt *s) { stmt_list.push_back(s); }
+  Block(): decl_list(), stmt_list(), size(0) {}
+  ~Block() {
+    for (Decl *d : decl_list) delete d;
+    for (Stmt *s : stmt_list) delete s;
+  }
+  void append_decl(Decl *d) { decl_list.push_back(d); }
+  void append_stmt(Stmt *s) { stmt_list.push_back(s); }
+  void merge(Block *b) {
+    stmt_list = b->stmt_list;
+    b->stmt_list.clear();
+    delete b;
+  }
   virtual void printOn(std::ostream &out) const override {
     out << "Block(";
     bool first = true;
+    for (Decl *d : decl_list) {
+      if (!first) out << ", ";
+      first = false;
+      out << *d;
+    }
     for (Stmt *s : stmt_list) {
       if (!first) out << ", ";
       first = false;
@@ -210,37 +246,22 @@ public:
     }
     out << ")";
   }
-  virtual void compile() const override {
-    for (Stmt *s : stmt_list)
-      s->compile();
+  virtual void run() const override {
+    for (int i = 0; i < size; ++i) rt_stack.push_back(0);
+    for (Stmt *s : stmt_list) s->run();
+    for (int i = 0; i < size; ++i) rt_stack.pop_back();
+  }
+  virtual void sem() override {
+    st.openScope();
+    for (Decl *d : decl_list) d->sem();
+    for (Stmt *s : stmt_list) s->sem();
+    size = st.getSizeOfCurrentScope();
+    st.closeScope();
   }
 private:
+  std::vector<Decl *> decl_list;
   std::vector<Stmt *> stmt_list;
+  int size;
 };
 
-inline void prologue() {
-  printf("\
-.text\n\
-.global _start\n\
-\n\
-_start:\n\
-  movl $var, %%edi\n\
-\n");
-}
-
-inline void epilogue() {
-  printf("\
-\n\
-  movl $0, %%ebx\n\
-  movl $1, %%eax\n\
-  int $0x80\n\
-\n\
-.data\n\
-var:\n\
-.rept 26\n\
-.long 0\n\
-.endr\n\
-NL:\n\
-.asciz \"\\n\"\n\
-");
-}
+#endif

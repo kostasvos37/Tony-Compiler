@@ -23,11 +23,14 @@ W [ \t\r\n]
 "do"    { return T_do; }
 "begin" { return T_begin; }
 "end"   { return T_end; }
+"var"   { return T_var; }
+"int"   { return T_int; }
+"bool"  { return T_bool; }
 
 {L}     { yylval.var = yytext[0]; return T_id; }
 {D}+    { yylval.num = atoi(yytext); return T_const; }
 
-[()+\-/%*=]   { yylval.op = yytext[0]; return yytext[0]; }
+[()+\-/%*=<>:]   { yylval.op = yytext[0]; return yytext[0]; }
 
 {W}+    { /* nothing */ }
 \'.*\n  { /* nothing' */ }
