@@ -3,6 +3,8 @@
 #include <string.h>
 #include "ast.hpp"
 #include "lexer.hpp"
+
+SymbolTable st;
 %}
 
 %token T_and      "and"
@@ -64,13 +66,12 @@
     FormalList *formallist;
     Header *header;
     FunctionDeclaration *funcdecl;
-    FunctionDefinitionList *funcdeflist;
     FunctionDefinition *funcdef;
     Elsif *elsif;
     Else *els;
     If *iff;
     For *fo;
-}
+ }
 
 %token<name> T_id      
 %token<num> T_const     
@@ -78,7 +79,7 @@
 %token<c> T_singlechar  
 
 %type<funcdef> Func_def
-%type<funcdeflist> Func_def_dec
+%type<funcdef> Func_def_dec
 %type<funcdecl> Func_Decl
 %type<header> Header
 %type<formallist> Par
@@ -108,14 +109,14 @@ Program:
 ;
 
 Func_def:
-    "def" Header ':' Func_def_dec  Stmt_Body "end" {$$ = new FunctionDefinition($2, $4, $5);}
+    "def" Header ':' Func_def_dec  Stmt_Body "end" {$4->merge($2, $5); $$ = $4;}
 ;
 
 Func_def_dec:
     Func_def Func_def_dec   {$2->append($1); $$ = $2;}
 |   Func_Decl Func_def_dec  {$2->append($1); $$ = $2;}
 |   Var_Def Func_def_dec    {$2->append($1); $$ = $2;}
-|   /*ε*/                   {$$ = new FunctionDefinitionList();}
+|   /*ε*/                   {$$ = new FunctionDefinition();}
 ;
 
 Header:

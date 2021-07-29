@@ -9,6 +9,8 @@
 #include <string>
 #include "symbol.hpp"
 
+void yyerror(const char *msg);
+
 class AST{
 public:
   virtual ~AST() {}
@@ -188,7 +190,7 @@ public:
     }
     out << "\n</VarList>\n";
   }
-private:
+protected:
   std::vector<Id *> ids;
   Type type;
 };
@@ -546,42 +548,50 @@ private:
   Header *header;
 };
 
-
-class FunctionDefinitionList: public AST {
-public:
-  FunctionDefinitionList(){}
-  ~FunctionDefinitionList() {for (AST *a : definitions) delete a;}
-
-  void append(AST* a) {
-    definitions.push_back(a);
-  }
-
-  virtual void printOn(std::ostream &out) const override {
-    out << "\n<FunctionDefinitionList>\n"; 
-    
-    for (AST *a : definitions) out << *a;
-    out <<"\n</FunctionDefinitionList>\n" ;
-  }
-
-private:
-  std::vector<AST *> definitions;
-};
-
-
 class FunctionDefinition: public AST {
 public:
-  FunctionDefinition(Header * hd, FunctionDefinitionList *fdl, StmtBody *stb):
-  header(hd), definitions(fdl), body(stb){}
-  ~FunctionDefinition() {delete header; delete definitions; delete body;}
+  FunctionDefinition(): header(), body(){}
+  ~FunctionDefinition() {
+    delete header; delete body;
+    for (VarList *a : var_definitions) delete a;
+    for (FunctionDeclaration *a : function_declarations) delete a;
+    for (FunctionDefinition *a : function_definitions) delete a;
+  }
+
+  void append(VarList* a) {
+    var_definitions.push_back(a);
+  }
+
+  void append(FunctionDeclaration* a) {
+    function_declarations.push_back(a);
+  }
+
+  void append(FunctionDefinition* a) {
+    function_definitions.push_back(a);
+  }
+
+  void merge(Header *hd, StmtBody *st) {
+    header = hd;
+    body = st;
+  }
 
   virtual void printOn(std::ostream &out) const override {
-    out << "\n<FunctionDefinition>\n" << *header << *definitions << *body <<"\n</FunctionDefinition>\n";
+    out << "\n<FunctionDefinition>\n" << *header; 
+    
+    for (VarList *a : var_definitions) out << *a;
+    for (FunctionDeclaration *a : function_declarations) out << *a;
+    for (FunctionDefinition *a : function_definitions) out << *a;
+
+    out << *body << "\n</FunctionDefinition>\n" ;
   }
+
 
 private:
   Header *header;
-  FunctionDefinitionList *definitions;
   StmtBody *body;
+  std::vector<VarList *> var_definitions;
+  std::vector<FunctionDeclaration *> function_declarations;
+  std::vector<FunctionDefinition *> function_definitions;
 };
 
 
