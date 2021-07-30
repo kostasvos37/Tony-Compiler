@@ -4,6 +4,7 @@
 
 #include <vector>
 #include <map>
+#include <iostream>
 
 void yyerror(const char *msg);
 
@@ -17,18 +18,28 @@ struct SymbolEntry {
 
 class Scope {
 public:
-    Scope() : locals() {}
+    Scope() : locals(), size(0) {}
     SymbolEntry *lookup(std::string c) {
         if (locals.find(c) == locals.end()) return nullptr;
         return &locals[c];
         
     }
     void insert(std::string c, Type t){
-        if (locals.find(c) != locals.end()) yyerror("Variable already declared");
+        if (locals.find(c) != locals.end()) ;//yyerror("Variable already declared");
         locals[c] = SymbolEntry(t);
-    };
+        ++size;
+    }
+    int getSize() const { return size; }
+
+    //For testing
+    void printScope() { 
+        for (auto i = locals.begin(); i != locals.end(); ++i){
+            std::cout << i->first << " " << i->second.type << std::endl;
+        }  
+    }
 private:
     std::map<std::string, SymbolEntry> locals;
+    int size;
 };
 
 class SymbolTable{
@@ -38,7 +49,7 @@ public:
             SymbolEntry *e = i->lookup(c);
             if (e!= nullptr) return e;
         }
-        yyerror("Variable not found");
+        //yyerror("Variable not found");
         return nullptr;
     }
     void insert(std::string c, Type t){
@@ -47,8 +58,27 @@ public:
     void openScope(){
         scopes.push_back(Scope());
     }
-    void closesScope(){
+    void closeScope(){
         scopes.pop_back();
+    }
+
+    int getSizeOfCurrentScope() const {
+        return scopes.back().getSize();
+    }
+
+    //For testing
+    void printSymbolTable(){
+        std::cout << "Printing symbol table" << std::endl;
+        int scopecounter=0;
+        for (auto i = scopes.rbegin(); i!= scopes.rend(); i++){
+            
+            std::cout << "<Scope " << scopecounter << ">" <<std::endl;
+            //SymbolEntry *e = i->lookup(c);
+            i->printScope();
+            std::cout << "</Scope " << scopecounter << ">" <<std::endl;
+            scopecounter++;
+        }
+
     }
 private:
     std::vector<Scope> scopes;

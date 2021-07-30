@@ -3,6 +3,7 @@
 #include <string.h>
 #include "ast.hpp"
 #include "lexer.hpp"
+#include "symbol.hpp"
 
 SymbolTable st;
 %}
@@ -105,7 +106,7 @@ SymbolTable st;
 ==============================================*/
 
 Program:
-    Func_def {std::cout << *$1;}
+    Func_def {$1->sem();}
 ;
 
 Func_def:

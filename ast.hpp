@@ -15,6 +15,7 @@ class AST{
 public:
   virtual ~AST() {}
   virtual void printOn(std::ostream &out) const = 0;
+  virtual void sem() {}
 };
 
 inline std::ostream& operator<< (std::ostream &out, const AST &t) {
@@ -37,8 +38,9 @@ inline std::ostream& operator<< (std::ostream &out, Type t) {
 
 
 class Expr: public AST {
+protected:
+  Type type;
 };
-
 
 class Stmt: public AST {
 };
@@ -57,6 +59,14 @@ public:
   Id(std::string v): var(v) {}
   virtual void printOn(std::ostream &out) const override {
     out << "<Id name=\"" << var << "\"> ";
+  }
+
+  void setType(Type t){
+    type = t;
+  }
+
+  virtual void sem() override {
+    st.insert(var, type);
   }
 private:
   std::string var;
@@ -180,6 +190,7 @@ public:
   }
   void set_type(Type t){
     type = t;
+    for (Id * i : ids) {i->setType(t);}
   }
 
   virtual void printOn(std::ostream &out) const override {
@@ -190,6 +201,11 @@ public:
     }
     out << "\n</VarList>\n";
   }
+  
+  virtual void sem() override {
+    for (Id * i : ids) i->sem();
+  }
+
 protected:
   std::vector<Id *> ids;
   Type type;
@@ -571,6 +587,7 @@ public:
   }
 
   void merge(Header *hd, StmtBody *st) {
+
     header = hd;
     body = st;
   }
@@ -583,6 +600,14 @@ public:
     for (FunctionDefinition *a : function_definitions) out << *a;
 
     out << *body << "\n</FunctionDefinition>\n" ;
+  }
+
+  virtual void sem() override {
+    st.openScope();
+    for (VarList *a : var_definitions) a->sem();
+    for (FunctionDefinition *a : function_definitions) a->sem();
+    st.printSymbolTable();
+    st.closeScope();
   }
 
 
