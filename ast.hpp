@@ -15,7 +15,7 @@ class AST {
 public:
   virtual ~AST() {}
   virtual void printOn(std::ostream &out) const = 0;
-  virtual void sem() {}
+  virtual void sem() = 0;
 };
 
 inline std::ostream& operator<< (std::ostream &out, const AST &t) {
@@ -38,6 +38,11 @@ inline std::ostream& operator<< (std::ostream &out, Type t) {
 
 
 class Expr: public AST {
+public:
+  bool type_check(Type t) {
+    sem();
+    return (type == t);
+  }
 protected:
   Type type;
 };
@@ -80,6 +85,9 @@ public:
   void printOn(std::ostream &out) const override {
     out << "\n<Array>\n" << *atom << "\n" << *expr << "\n</Array>\n";
   }
+  void sem() override {
+    type = TYPE_array;
+  }
 private:
   Atom *atom;
   Expr *expr;
@@ -103,6 +111,9 @@ public:
   void printOn(std::ostream &out) const override {
     out << "<CharConst value='"<< char_const << "\' ascii="<< (int) char_const << "> ";
   }
+  void sem() override {
+    type = TYPE_char;
+  }
 private:
   unsigned char char_const;
 };
@@ -113,6 +124,9 @@ public:
   IntConst(int n): num(n) {}
   void printOn(std::ostream &out) const override {
     out << "<IntConst value=" << num << "> ";
+  }
+  void sem() override {
+    type = TYPE_int;
   }
 private:
   int num;
@@ -143,12 +157,15 @@ public:
 
 class Boolean: public Expr {
 public:
-  Boolean(std::string b): boo(b) {} //wink wink pap
+  Boolean(std::string b): boolean_value(b) {}
   void printOn(std::ostream &out) const override {
-    out << "<Boolean value=" << boo << "> ";
+    out << "<Boolean value=" << boolean_value << "> ";
+  }
+  void sem() override {
+    type = TYPE_bool;
   }
 private:
-  std::string boo;
+  std::string boolean_value;
 };
 
 
