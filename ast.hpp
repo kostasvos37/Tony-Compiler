@@ -11,7 +11,7 @@
 
 void yyerror(const char *msg);
 
-class AST{
+class AST {
 public:
   virtual ~AST() {}
   virtual void printOn(std::ostream &out) const = 0;
@@ -57,7 +57,7 @@ class Simple: public Stmt {
 class Id: public Atom {
 public:
   Id(std::string v): var(v) {}
-  virtual void printOn(std::ostream &out) const override {
+  void printOn(std::ostream &out) const override {
     out << "<Id name=\"" << var << "\"> ";
   }
 
@@ -77,7 +77,7 @@ class Array: public Atom {
 public:
   Array(Atom *a, Expr *e): atom(a), expr(e) {}
   ~Array() {delete atom; delete expr;}
-  virtual void printOn(std::ostream &out) const override {
+  void printOn(std::ostream &out) const override {
     out << "\n<Array>\n" << *atom << "\n" << *expr << "\n</Array>\n";
   }
 private:
@@ -89,7 +89,7 @@ private:
 class StringLiteral: public Atom {
 public:
   StringLiteral(std::string str): strlit(str) {}
-  virtual void printOn(std::ostream &out) const override {
+  void printOn(std::ostream &out) const override {
     out << "<String value=\"" << strlit << "\"> ";
   }
 private:
@@ -100,7 +100,7 @@ private:
 class CharConst: public Expr {
 public:
   CharConst(unsigned char c): char_const(c) {}
-  virtual void printOn(std::ostream &out) const override {
+  void printOn(std::ostream &out) const override {
     out << "<CharConst value='"<< char_const << "\' ascii="<< (int) char_const << "> ";
   }
 private:
@@ -111,7 +111,7 @@ private:
 class IntConst: public Expr {
 public:
   IntConst(int n): num(n) {}
-  virtual void printOn(std::ostream &out) const override {
+  void printOn(std::ostream &out) const override {
     out << "<IntConst value=" << num << "> ";
   }
 private:
@@ -123,7 +123,7 @@ class New: public Expr {
 public:
   New(Type t, Expr *right): typ(t), expr(right){}
   ~New() {delete expr;}
-  virtual void printOn(std::ostream &out) const override {
+  void printOn(std::ostream &out) const override {
     out << "<New> " << typ << *expr << "</New> ";
   }
 private:
@@ -135,7 +135,7 @@ private:
 class Nil: public Expr {
 public:
   Nil() {}
-  virtual void printOn(std::ostream &out) const override {
+  void printOn(std::ostream &out) const override {
     out << "<Nil> ";
   }
 };
@@ -144,7 +144,7 @@ public:
 class Boolean: public Expr {
 public:
   Boolean(std::string b): boo(b) {} //wink wink pap
-  virtual void printOn(std::ostream &out) const override {
+  void printOn(std::ostream &out) const override {
     out << "<Boolean value=" << boo << "> ";
   }
 private:
@@ -156,7 +156,7 @@ class BinOp: public Expr {
 public:
   BinOp(Expr *l, std::string o, Expr *r): left(l), op(o), right(r) {}
   ~BinOp() { delete left; delete right; }
-  virtual void printOn(std::ostream &out) const override {
+  void printOn(std::ostream &out) const override {
     out << "\n<Binop op=\"" << op << "\">\n" << *left << *right << "\n</BinOp>\n";
   }
 private:
@@ -170,7 +170,7 @@ class UnOp: public Expr {
 public:
   UnOp(std::string(o), Expr *r): op(o), right(r) {}
   ~UnOp() { delete right; }
-  virtual void printOn(std::ostream &out) const override {
+  void printOn(std::ostream &out) const override {
     out << "\n<UnOp op=\"" << op << "\">\n" << *right << "\n</UnOp>\n";
   }
 private:
@@ -188,12 +188,12 @@ public:
   void append(Id * id) {
     ids.push_back(id);
   }
-  void set_type(Type t){
+  void set_type(Type t) {
     type = t;
     for (Id * i : ids) {i->setType(t);}
   }
 
-  virtual void printOn(std::ostream &out) const override {
+  void printOn(std::ostream &out) const override {
     out << "\n<VarList>\n";
     out << type;
     for (Id * i : ids) {
@@ -216,7 +216,7 @@ class Formal: public AST {
 public:
   Formal(VarList* v, bool isref): varlist(v), isRef(isref) {}
   ~Formal() {delete varlist;}
-  virtual void printOn(std::ostream &out) const override {
+  void printOn(std::ostream &out) const override {
     out << "\n<Formal isRef=\"" << (isRef ? "yes" : "no") << "\">\n" << *varlist << "</Formal>";
   }
 private:
@@ -236,7 +236,7 @@ public:
     formals.push_back(f);
   }
 
-  virtual void printOn(std::ostream &out) const override {
+  void printOn(std::ostream &out) const override {
     out << "\n<FormalList>\n";
 
     for (Formal * f : formals) {
@@ -254,7 +254,7 @@ public:
   Header(Type t, Id *name, FormalList *f): type(t), formals(f), id(name), isTyped(true) {}
   Header(Id *name, FormalList *f): formals(f), id(name), isTyped(false) {}
   ~Header(){ delete formals; delete id;}
-  virtual void printOn(std::ostream &out) const override {
+  void printOn(std::ostream &out) const override {
     out << "<Header>\n"; 
     if(!isTyped) {
       out << "<NoType>";
@@ -281,7 +281,7 @@ class Return: public Stmt{
 public:
   Return(Expr* e): ret_expr(e) {}
   ~Return() {delete ret_expr;}
-  virtual void printOn(std::ostream &out) const override {
+  void printOn(std::ostream &out) const override {
     out << "\n<Return>\n" << *ret_expr << "\n</Return>\n";
   }
 private:
@@ -292,7 +292,7 @@ private:
 class Exit: public Stmt{
 public:
   Exit() {}
-  virtual void printOn(std::ostream &out) const override {
+  void printOn(std::ostream &out) const override {
     out << "\n<Exit>\n";
   }
 };
@@ -306,7 +306,7 @@ public:
     stmts.push_back(stmt);
     return;
   }
-  virtual void printOn(std::ostream &out) const override {
+  void printOn(std::ostream &out) const override {
     out << "\n<StmtBody>\n";
     for (Stmt *s : stmts) {
       out << *s;
@@ -319,11 +319,11 @@ private:
 };
 
 
-class Assign: public Simple{
+class Assign: public Simple {
 public:
   Assign(Atom *a, Expr *e): atom(a), expr(e) {}
   ~Assign() {delete atom; delete expr;}
-  virtual void printOn(std::ostream &out) const override {
+  void printOn(std::ostream &out) const override {
     out << "\n<Assign>\n" << *atom << *expr << "\n</Assign>\n";
   }
 private:
@@ -335,7 +335,7 @@ private:
 class Skip: public Simple{
 public:
   Skip() {}
-  virtual void printOn(std::ostream &out) const override {
+  void printOn(std::ostream &out) const override {
     out << "\n<Skip>\n";
   }
 };
@@ -368,7 +368,7 @@ public:
     elsif_stmt_bodies.push_back(s);
   }
 
-    virtual void printOn(std::ostream &out) const override {
+    void printOn(std::ostream &out) const override {
     // This is never used
     out << "<Elsif> </Elsif>";
     
@@ -402,7 +402,7 @@ public:
   }
 
   // This is never used, only for testing
-  virtual void printOn(std::ostream &out) const override {
+  void printOn(std::ostream &out) const override {
     
     if(!else_stmt.empty()){
       out << "\n<Else>\n" << *else_stmt[0] << "\n</Else>\n";
@@ -439,7 +439,7 @@ public:
     for (StmtBody* s: statements) delete s; 
   }
 
-  virtual void printOn(std::ostream &out) const override {
+  void printOn(std::ostream &out) const override {
     out << "\n<If>\n";
     out << *conditions[0] << *statements[0];
 
@@ -473,7 +473,7 @@ public:
   void append(Simple *s) { simples.push_back(s); }
   void insert_front(Simple *s) { simples.insert(simples.begin(), s);}
 
-  virtual void printOn(std::ostream &out) const override {
+  void printOn(std::ostream &out) const override {
     out << "\n<SimplesList>\n";
     for (Simple *s : simples) {
       out << *s;
@@ -497,7 +497,7 @@ public:
     delete expr;
     delete simple_list2;
     delete stmt_body; }
-  virtual void printOn(std::ostream &out) const override {
+  void printOn(std::ostream &out) const override {
     out << "\n<For>\n" << *simple_list1 << *expr << *simple_list2  << *stmt_body << "\n</For>\n";
   }
 
@@ -517,7 +517,7 @@ public:
   void append(Expr *e) { expressions.push_back(e); }
   void insert_front(Expr *e) { expressions.insert(expressions.begin(), e);}
 
-  virtual void printOn(std::ostream &out) const override {
+  void printOn(std::ostream &out) const override {
     out << "\n<ExprList>\n";
     for (Expr *e : expressions) {
       out << *e;
@@ -538,7 +538,7 @@ public:
   FunctionCall(Id *n): name(n), hasParams(false) {}
   FunctionCall(Id *n, ExprList *el): name(n), params(el), hasParams(true) {}
   ~FunctionCall() {delete name; if (hasParams) delete params;}
-  virtual void printOn(std::ostream &out) const override {
+  void printOn(std::ostream &out) const override {
     if(!hasParams)
       out << "\n<FunctionCall>\n" << *name << "\n</FunctionCall>\n";
     else
@@ -556,7 +556,7 @@ class FunctionDeclaration: public AST {
 public:
   FunctionDeclaration(Header *hd): header(hd){}
   ~FunctionDeclaration() {delete header;}
-  virtual void printOn(std::ostream &out) const override {
+  void printOn(std::ostream &out) const override {
     out << "\n<FunctionDeclaration>\n" << *header << "\n</FunctionDeclaration>\n" ;
   }
 
@@ -592,7 +592,7 @@ public:
     body = st;
   }
 
-  virtual void printOn(std::ostream &out) const override {
+  void printOn(std::ostream &out) const override {
     out << "\n<FunctionDefinition>\n" << *header; 
     
     for (VarList *a : var_definitions) out << *a;
