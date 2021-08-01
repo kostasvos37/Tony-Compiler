@@ -15,7 +15,8 @@ class AST {
 public:
   virtual ~AST() {}
   virtual void printOn(std::ostream &out) const = 0;
-  virtual void sem() = 0;
+  virtual void sem() {}; // NOTE: After we implement `sem()` for all the subclasses
+                         // it would make sense to make this: `virtual void sem() = 0`.
 };
 
 inline std::ostream& operator<< (std::ostream &out, const AST &t) {
