@@ -220,6 +220,19 @@ public:
   void printOn(std::ostream &out) const override {
     out << "\n<UnOp op=\"" << op << "\">\n" << *right << "\n</UnOp>\n";
   }
+  void sem() override {
+    if (op == "+" || op == "-") {
+      if (!right->type_check(TYPE_int)) {
+        yyerror("Type mismatch. Expression must be of type 'int'.");
+      }
+      type = TYPE_int;
+    } else if (op == "not") { 
+      if (!right->type_check(TYPE_bool)) {
+        yyerror("Type mismatch. Expression must be of type 'bool'.");
+      }
+      type = TYPE_bool;
+    }
+  }
 private:
   std::string op;
   Expr *right;
