@@ -44,6 +44,13 @@ public:
     sem();
     return (type == t);
   }
+  Type get_type() {
+    /* 
+      We want to be able to access `type` from a pointer to an `Expr`.
+      But `type` is protected, so we need this `public` method.
+    */
+    return type;
+  }
 protected:
   Type type;
 };
@@ -176,6 +183,28 @@ public:
   ~BinOp() { delete left; delete right; }
   void printOn(std::ostream &out) const override {
     out << "\n<Binop op=\"" << op << "\">\n" << *left << *right << "\n</BinOp>\n";
+  }
+  void sem() {
+    if (op == "+" || op == "-" || op == "*" || op == "/" || op == "mod") {
+      if (!left->type_check(TYPE_int) || !right->type_check(TYPE_int)) {
+        // NOTE: We must be more specific in our errors. This is temporary.
+        yyerror("Type mismatch\n");
+      }
+      type = TYPE_int;
+    } else if (op == "=" || op == "<>" || op == "<" || op == ">" || op == "<=" || op == ">=") {
+      left->sem();
+      right->sem();
+      if (left->get_type() != right->get_type()) {
+        yyerror("Type mismatch\n");
+      }
+      type = TYPE_bool;
+    } else if (op == "and" || op == "or") {
+      if (!left->type_check(TYPE_bool) || !right->type_check(TYPE_bool)) {
+        yyerror("Type mismatch\n");
+      }
+      type = TYPE_bool;
+    }
+    // TODO: A case for the `#` binary operator.
   }
 private:
   Expr *left;
@@ -343,6 +372,9 @@ public:
   ~Assign() {delete atom; delete expr;}
   void printOn(std::ostream &out) const override {
     out << "\n<Assign>\n" << *atom << *expr << "\n</Assign>\n";
+  }
+  void sem() override {
+    expr->sem();
   }
 private:
   Atom *atom;
