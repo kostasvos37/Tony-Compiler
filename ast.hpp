@@ -66,7 +66,6 @@ class Atom: public Expr {
 class Simple: public Stmt {  
 };
 
-
 class Id: public Atom {
 public:
   Id(std::string v): var(v) {}
@@ -78,12 +77,16 @@ public:
     type = t;
   }
 
-  virtual void sem() override {
+  void insertIntoScope(){
     st.insert(var, type);
+  }
+
+  virtual void sem() override {
   }
 private:
   std::string var;
 };
+
 
 
 class Array: public Atom {
@@ -250,7 +253,6 @@ public:
   }
   void set_type(Type t) {
     type = t;
-    for (Id * i : ids) {i->setType(t);}
   }
 
   void printOn(std::ostream &out) const override {
@@ -263,7 +265,7 @@ public:
   }
   
   virtual void sem() override {
-    for (Id * i : ids) i->sem();
+    for (Id * i : ids) {i->setType(type); i->insertIntoScope();}
   }
 
 protected:
@@ -272,12 +274,17 @@ protected:
 };
 
 
+
 class Formal: public AST {
 public:
   Formal(VarList* v, bool isref): varlist(v), isRef(isref) {}
   ~Formal() {delete varlist;}
   void printOn(std::ostream &out) const override {
     out << "\n<Formal isRef=\"" << (isRef ? "yes" : "no") << "\">\n" << *varlist << "</Formal>";
+  }
+  
+  virtual void sem() override {
+    varlist->sem();
   }
 private:
   VarList* varlist;
@@ -304,11 +311,16 @@ public:
     }
     out << "\n</FormalList>\n";
   }
+
+  virtual void sem() override {
+    for (Formal *f: formals) f->sem();
+  }
 private:
   std::vector<Formal *> formals;
 };
 
 
+// Sem should probably include name of header somewhere?
 class Header: public AST {
 public:
   Header(Type t, Id *name, FormalList *f): type(t), formals(f), id(name), isTyped(true) {}
@@ -329,6 +341,12 @@ public:
     }
     out << "\n</Header>\n";
   }
+
+
+  virtual void sem() override {
+    if (formals) formals->sem();
+  }
+
 private:
   Type type;
   FormalList* formals;
@@ -490,7 +508,6 @@ public:
     conditions.push_back(if_condition);
     statements.push_back(if_stmt_body);
     
-    std::cout << "Creating if";
     std::vector<Expr *> elsif_conds = elsif_stmt->get_conds();
     std::vector<StmtBody *> elsif_stmt_bodies = elsif_stmt->get_stmt_bodies();
     for(int i=0; i < (int) elsif_conds.size(); i++){
@@ -674,6 +691,7 @@ public:
 
   virtual void sem() override {
     st.openScope();
+    header->sem();
     for (VarList *a : var_definitions) a->sem();
     for (FunctionDefinition *a : function_definitions) a->sem();
     body->sem();

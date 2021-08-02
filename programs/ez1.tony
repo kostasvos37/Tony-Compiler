@@ -1,7 +1,9 @@
-def putc():
-  if limit >= 2: counter := counter + 1 puti(2) puts("\n")
-  elsif limit = 3: x:=4
-  elsif limit = 3: x:=4
-  else: x:=2
+def putc(char d,e):
+  int a
+  bool b,c
+  def bool? ():
+    int c, f
+    f := c
   end
+  x:=a
 end
