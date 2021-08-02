@@ -188,19 +188,19 @@ public:
     if (op == "+" || op == "-" || op == "*" || op == "/" || op == "mod") {
       if (!left->type_check(TYPE_int) || !right->type_check(TYPE_int)) {
         // NOTE: We must be more specific in our errors. This is temporary.
-        yyerror("Type mismatch\n");
+        yyerror("Type mismatch. Both expressions must be of type 'int'.\n");
       }
       type = TYPE_int;
     } else if (op == "=" || op == "<>" || op == "<" || op == ">" || op == "<=" || op == ">=") {
       left->sem();
       right->sem();
       if (left->get_type() != right->get_type()) {
-        yyerror("Type mismatch\n");
+        yyerror("Type mismatch. Expressions must have the same type.\n");
       }
       type = TYPE_bool;
     } else if (op == "and" || op == "or") {
       if (!left->type_check(TYPE_bool) || !right->type_check(TYPE_bool)) {
-        yyerror("Type mismatch\n");
+        yyerror("Type mismatch. Both expressions must be of type 'bool'.\n");
       }
       type = TYPE_bool;
     }
@@ -360,6 +360,11 @@ public:
     }
     out << "\n</StmtBody>\n";
   }
+  void sem() override {
+    for (Stmt *s : stmts) {
+      s->sem();
+    }
+  }
   
 private:
   std::vector<Stmt*> stmts;
@@ -374,6 +379,8 @@ public:
     out << "\n<Assign>\n" << *atom << *expr << "\n</Assign>\n";
   }
   void sem() override {
+    // NOTE: Here, we should `type_check` that `expr` has the same
+    // type as the `atom` that's on the left.
     expr->sem();
   }
 private:
@@ -656,6 +663,7 @@ public:
     st.openScope();
     for (VarList *a : var_definitions) a->sem();
     for (FunctionDefinition *a : function_definitions) a->sem();
+    body->sem();
     st.printSymbolTable();
     st.closeScope();
   }
