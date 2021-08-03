@@ -82,6 +82,11 @@ public:
   }
 
   virtual void sem() override {
+
+    SymbolEntry *e = st.lookup(var);
+    type = e->type;
+
+    std::cout << "I think i saw a variable: " << var << " with type " << type <<"!\n";
   }
 private:
   std::string var;
@@ -412,7 +417,9 @@ public:
   void sem() override {
     // NOTE: Here, we should `type_check` that `expr` has the same
     // type as the `atom` that's on the left.
-    expr->sem();
+    
+    //expr->sem();
+    atom->sem();
   }
 private:
   Atom *atom;
@@ -695,7 +702,6 @@ public:
     for (VarList *a : var_definitions) a->sem();
     for (FunctionDefinition *a : function_definitions) a->sem();
     body->sem();
-    st.printSymbolTable();
     st.closeScope();
   }
 

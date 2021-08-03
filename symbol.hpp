@@ -20,12 +20,12 @@ class Scope {
 public:
     Scope() : locals(), size(0) {}
     SymbolEntry *lookup(std::string c) {
-        if (locals.find(c) == locals.end()) return nullptr;
+        if (locals.find(c) == locals.end()) {return nullptr;}
         return &locals[c];
         
     }
     void insert(std::string c, Type t){
-        if (locals.find(c) != locals.end()) ;//yyerror("Variable already declared");
+        if (locals.find(c) != locals.end()) yyerror("Variable already declared");
         locals[c] = SymbolEntry(t);
         ++size;
     }
@@ -49,7 +49,7 @@ public:
             SymbolEntry *e = i->lookup(c);
             if (e!= nullptr) return e;
         }
-        //yyerror("Variable not found");
+        yyerror("Variable not found");
         return nullptr;
     }
     void insert(std::string c, Type t){
