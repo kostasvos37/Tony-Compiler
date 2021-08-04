@@ -78,12 +78,16 @@ public:
     st.insert(var, type);
   }
 
+  void insertIntoParentScope(){
+    st.insertIntoParentScope(var, type);
+  }
+
   virtual void sem() override {
 
     SymbolEntry *e = st.lookup(var);
     type = e->type;
-
-    std::cout << "I think i saw a variable: " << var << " with type " << type <<"!\n";
+    // Testing
+    //std::cout << "I think i saw a variable: " << var << " with type " << type <<"!\n";
   }
 private:
   std::string var;
@@ -345,8 +349,21 @@ public:
     out << "\n</Header>\n";
   }
 
-
-  virtual void sem() override {
+  // To handle declarations and definitions
+  // The way it is structured, the function adds its own header to above function's scope
+  // Declarations have headers too, but need to insert on same scope
+  void semHeader(bool overrideHeader = false) {
+    if (isTyped){
+      id->setType(type);
+    }else{
+      id->setType(new Type(TYPE_nil , nullptr));
+    }
+    if(st.hasParentScope()){
+      id->insertIntoParentScope();
+    }
+    if(overrideHeader){
+      id->insertIntoScope();
+    }
     if (formals) formals->sem();
   }
 
@@ -652,6 +669,10 @@ public:
     out << "\n<FunctionDeclaration>\n" << *header << "\n</FunctionDeclaration>\n" ;
   }
 
+  virtual void sem() override {
+    header->semHeader(true);
+  }
+
 private:
   Header *header;
 };
@@ -696,10 +717,12 @@ public:
 
   virtual void sem() override {
     st.openScope();
-    header->sem();
+    header->semHeader();
     for (VarList *a : var_definitions) a->sem();
+    for (FunctionDeclaration *a : function_declarations) a->sem();
     for (FunctionDefinition *a : function_definitions) a->sem();
     body->sem();
+    st.printSymbolTable();
     st.closeScope();
   }
 

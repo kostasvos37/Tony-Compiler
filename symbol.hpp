@@ -6,6 +6,7 @@
 #include <map>
 #include <iostream>
 #include "type.hpp"
+#include <string>
 
 void yyerror(const char *msg);
 
@@ -32,9 +33,9 @@ public:
     int getSize() const { return size; }
 
     //For testing
-    void printScope() { 
+    void printScope(int ident) { 
         for (auto i = locals.begin(); i != locals.end(); ++i){
-            std::cout << i->first << " " << i->second.type << std::endl;
+            std::cout << std::string(ident*4, ' ') << i->first << " " << i->second.type << std::endl;
         }  
     }
 private:
@@ -55,27 +56,31 @@ public:
     void insert(std::string c, Type* t){
         scopes.back().insert(c, t);
     }
+    bool hasParentScope(){
+        return scopes.size() > 1;
+    }
+    void insertIntoParentScope(std::string c, Type* t){
+        scopes.at(scopes.size() -2).insert(c, t);
+    }
     void openScope(){
         scopes.push_back(Scope());
     }
     void closeScope(){
         scopes.pop_back();
     }
-
     int getSizeOfCurrentScope() const {
         return scopes.back().getSize();
     }
-
     //For testing
     void printSymbolTable(){
         std::cout << "Printing symbol table" << std::endl;
         int scopecounter=0;
-        for (auto i = scopes.rbegin(); i!= scopes.rend(); i++){
+        for (auto i = scopes.begin(); i!= scopes.end(); i++){
             
-            std::cout << "<Scope " << scopecounter << ">" <<std::endl;
+            std::cout << std::string(scopecounter*4, ' ') << "<Scope " << scopecounter << ">" <<std::endl;
             //SymbolEntry *e = i->lookup(c);
-            i->printScope();
-            std::cout << "</Scope " << scopecounter << ">" <<std::endl;
+            i->printScope(scopecounter);
+            std::cout << std::string(scopecounter*4, ' ') << "</Scope " << scopecounter << ">" <<std::endl;
             scopecounter++;
         }
 
