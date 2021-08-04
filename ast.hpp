@@ -356,7 +356,7 @@ public:
     if (isTyped){
       id->setType(type);
     }else{
-      id->setType(new Type(TYPE_nil , nullptr));
+      id->setType(new Type(TYPE_void , nullptr));
     }
     if(st.hasParentScope()){
       id->insertIntoParentScope();
