@@ -7,6 +7,7 @@
 #include <map>
 #include <vector>
 #include <string>
+#include <algorithm>
 #include "symbol.hpp"
 #include "type.hpp"
 
@@ -279,6 +280,11 @@ public:
   void append(Id * id) {
     ids.push_back(id);
   }
+  
+  void reverse(){
+    std::reverse(ids.begin(), ids.end());
+  }
+  
   void set_type(Type* t) {
     type = t;
   }
@@ -329,6 +335,10 @@ public:
 
   void append(Formal * f) {
     formals.push_back(f);
+  }
+
+  void reverse(){
+    std::reverse(formals.begin(), formals.end());
   }
 
   void printOn(std::ostream &out) const override {
@@ -423,8 +433,12 @@ public:
   ~StmtBody() { for (Stmt *s : stmts) delete s; }
   void append(Stmt* stmt) {
     stmts.push_back(stmt);
-    return;
   }
+
+  void reverse(){
+    std::reverse(stmts.begin(), stmts.end());
+  }
+
   void printOn(std::ostream &out) const override {
     out << "\n<StmtBody>\n";
     for (Stmt *s : stmts) {
@@ -602,7 +616,11 @@ public:
   ~SimpleList() { for (Simple *s : simples) delete s; }
 
   void append(Simple *s) { simples.push_back(s); }
-  void insert_front(Simple *s) { simples.insert(simples.begin(), s);}
+
+  void reverse(){
+    std::reverse(simples.begin(), simples.end());
+  }
+  
 
   void printOn(std::ostream &out) const override {
     out << "\n<SimplesList>\n";
@@ -645,8 +663,11 @@ public:
   ExprList(): expressions() {}
   ~ExprList() { for (Expr *e : expressions) delete e; }
 
-  void append(Expr *e) { expressions.push_back(e); }
-  void insert_front(Expr *e) { expressions.insert(expressions.begin(), e);}
+  void append(Expr *e) { expressions.push_back(e); };
+
+  void reverse(){
+    std::reverse(expressions.begin(), expressions.end());
+  }
 
   void printOn(std::ostream &out) const override {
     out << "\n<ExprList>\n";
@@ -704,21 +725,11 @@ public:
   FunctionDefinition(): header(), body(){}
   ~FunctionDefinition() {
     delete header; delete body;
-    for (VarList *a : var_definitions) delete a;
-    for (FunctionDeclaration *a : function_declarations) delete a;
-    for (FunctionDefinition *a : function_definitions) delete a;
+    for (AST *a : local_definitions) delete a;
   }
 
-  void append(VarList* a) {
-    var_definitions.push_back(a);
-  }
-
-  void append(FunctionDeclaration* a) {
-    function_declarations.push_back(a);
-  }
-
-  void append(FunctionDefinition* a) {
-    function_definitions.push_back(a);
+  void append(AST* a) {
+    local_definitions.push_back(a);
   }
 
   void merge(Header *hd, StmtBody *st) {
@@ -727,12 +738,14 @@ public:
     body = st;
   }
 
+  void reverse(){
+    std::reverse(local_definitions.begin(), local_definitions.end());
+  }
+
   void printOn(std::ostream &out) const override {
     out << "\n<FunctionDefinition>\n" << *header; 
     
-    for (VarList *a : var_definitions) out << *a;
-    for (FunctionDeclaration *a : function_declarations) out << *a;
-    for (FunctionDefinition *a : function_definitions) out << *a;
+    for (AST *a : local_definitions) out << *a;
 
     out << *body << "\n</FunctionDefinition>\n" ;
   }
@@ -740,9 +753,7 @@ public:
   virtual void sem() override {
     st.openScope();
     header->semHeader();
-    for (VarList *a : var_definitions) a->sem();
-    for (FunctionDeclaration *a : function_declarations) a->sem();
-    for (FunctionDefinition *a : function_definitions) a->sem();
+    for (AST *a : local_definitions) a->sem();
     body->sem();
     st.printSymbolTable();
     st.closeScope();
@@ -752,9 +763,7 @@ public:
 private:
   Header *header;
   StmtBody *body;
-  std::vector<VarList *> var_definitions;
-  std::vector<FunctionDeclaration *> function_declarations;
-  std::vector<FunctionDefinition *> function_definitions;
+  std::vector<AST *> local_definitions;
 };
 
 

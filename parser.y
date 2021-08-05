@@ -106,11 +106,13 @@ SymbolTable st;
 ==============================================*/
 
 Program:
-    Func_def {$1->sem();}
+    Func_def {//$1->sem();
+        std::cout << *$1;
+    }
 ;
 
 Func_def:
-    "def" Header ':' Func_def_dec  Stmt_Body "end" {$4->merge($2, $5); $$ = $4;}
+    "def" Header ':' Func_def_dec  Stmt_Body "end" {$4->merge($2, $5); $4->reverse(); $$ = $4;}
 ;
 
 Func_def_dec:
@@ -122,9 +124,9 @@ Func_def_dec:
 
 Header:
     Type T_id '(' ')'               {$$ = new Header($1, new Id(std::string($2)), NULL);}
-|   Type T_id '(' Formal Par ')'    {$5->append($4); $$ = new Header($1, new Id(std::string($2)), $5);}
+|   Type T_id '(' Formal Par ')'    {$5->append($4); $5->reverse(); $$ = new Header($1, new Id(std::string($2)), $5);}
 |   T_id '('')'                     {$$ = new Header(new Id(std::string($1)),  NULL);}
-|   T_id '(' Formal Par ')'         {$4->append($3); $$ = new Header(new Id(std::string($1)), $4);}
+|   T_id '(' Formal Par ')'         {$4->append($3); $4->reverse(); $$ = new Header(new Id(std::string($1)), $4);}
 ;
 
 Func_Decl:
@@ -142,7 +144,7 @@ Formal:
 ;
 
 Var_Def: 
-    Type T_id Var_Comma    {$3->append(new Id(std::string($2))); $3->set_type($1); $$ = $3;}
+    Type T_id Var_Comma    {$3->append(new Id(std::string($2))); $3->set_type($1); $3->reverse(); $$ = $3;}
 ;
 
 Var_Comma:
@@ -167,7 +169,7 @@ Stmt:
 ;
 
 Stmt_Body: 
-    Stmt Stmt_Full  {$2->append($1); $$ = $2;}
+    Stmt Stmt_Full  {$2->append($1); $2->reverse(); $$ = $2;}
 ;
 
 Stmt_Full:   
@@ -200,7 +202,7 @@ Simple:
 ;
 
 Simple_List: 
-    Simple  Simple_Comma    {$2->append($1); $$ = $2;}
+    Simple  Simple_Comma    {$2->append($1); $2->reverse(); $$ = $2;}
 ;
 
 /* Υλοποιεί το ("," Simple)* της γραμματικής.
@@ -217,7 +219,7 @@ Call:
 ;
 
 Expr_List: 
-    Expr  Expr_Comma    {$2->append($1); $$ = $2;}
+    Expr  Expr_Comma    {$2->append($1); $2->reverse(); $$ = $2;}
 ;
 
 Expr_Comma:
