@@ -72,7 +72,7 @@ public:
     out << "<Id name=\"" << var << "\"> ";
   }
 
-  void setType(Type* t){
+  void set_type(Type* t){
     type = t;
   }
 
@@ -84,12 +84,11 @@ public:
     st.insertIntoParentScope(var, type);
   }
 
-  virtual void sem() override {
-
+  void sem() override {
     SymbolEntry *e = st.lookup(var);
     type = e->type;
-    // Testing
-    //std::cout << "I think i saw a variable: " << var << " with type " << type <<"!\n";
+    // For testing:
+    // std::cout << "I think i saw a variable: " << var << " with type " << type <<"!\n";
   }
 private:
   std::string var;
@@ -299,7 +298,7 @@ public:
   }
   
   virtual void sem() override {
-    for (Id * i : ids) {i->setType(type); i->insertIntoScope();}
+    for (Id * i : ids) {i->set_type(type); i->insertIntoScope();}
   }
 
 protected:
@@ -385,9 +384,9 @@ public:
   // Declarations have headers too, but need to insert on same scope
   void semHeader(bool overrideHeader = false) {
     if (isTyped){
-      id->setType(type);
+      id->set_type(type);
     }else{
-      id->setType(new Type(TYPE_void , nullptr));
+      id->set_type(new Type(TYPE_void , nullptr));
     }
     if(st.hasParentScope()){
       id->insertIntoParentScope();
@@ -468,7 +467,6 @@ public:
     // TODO: Here, we should `type_check` that `expr` has the same
     // type as the `atom` that's on the left.
     
-    //expr->sem();
     atom->sem();
     expr->sem();
   }
