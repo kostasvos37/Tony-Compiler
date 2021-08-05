@@ -468,7 +468,10 @@ public:
     // type as the `atom` that's on the left.
     
     atom->sem();
-    expr->sem();
+    if (!expr->type_check(atom->get_type())) {
+      yyerror("Atom on the left and expression on the right should \
+               have the same type during assignment.\n");
+    }
   }
 private:
   Atom *atom;
