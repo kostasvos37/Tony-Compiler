@@ -1,0 +1,6 @@
+def return_tail():
+  list[int] x
+  list[int] y
+  y := 42 # 17 # (41+1) # nil
+  x := tail(y)
+end

@@ -4,7 +4,7 @@
 
 #include <iostream>
 
-enum TypeBlock {TYPE_int, TYPE_bool, TYPE_char, TYPE_array, TYPE_list, TYPE_void};
+enum TypeBlock {TYPE_int, TYPE_bool, TYPE_char, TYPE_array, TYPE_list, TYPE_void, TYPE_any};
 
 class Type {
 public:

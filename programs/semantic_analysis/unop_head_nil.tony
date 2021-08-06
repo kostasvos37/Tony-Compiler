@@ -1,0 +1,4 @@
+def return_head():
+  int x
+  x := head(nil)
+end

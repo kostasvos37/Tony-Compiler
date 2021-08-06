@@ -1,0 +1,4 @@
+def add():
+  int x
+  x := true
+end

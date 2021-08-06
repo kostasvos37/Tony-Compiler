@@ -14,6 +14,7 @@
 void yyerror(const char *msg);
 
 bool check_type_equality(Type* type1, Type* type2);
+bool is_nil_constant(Type *type);
 
 class AST {
 public:
@@ -37,8 +38,8 @@ public:
   }
   bool type_check(TypeBlock t) {
     /*
-      This is just an overloading of the method above.
-      It is used for simpler cases.
+     * This is just an overloading of the method above.
+     * It is used for simpler cases.
     */    
     sem();
     return (t == type->get_current_type() && type->get_nested_type() == nullptr);
@@ -165,6 +166,10 @@ private:
 };
 
 
+/*
+ *  This is a constant value (check Tony language description).
+    It is equal to an empty list and has type: list[t], where `t` can be any type.
+ */
 class Nil: public Expr {
 public:
   Nil() {}
@@ -172,7 +177,7 @@ public:
     out << "<Nil> ";
   }
   void sem() override {
-    type = new Type(TYPE_list, nullptr);
+    type = new Type(TYPE_list, new Type(TYPE_any, nullptr));
   }
 };
 
@@ -262,6 +267,45 @@ public:
         yyerror("Type mismatch. Expression must be of type 'bool'.");
       }
       type = new Type(TYPE_bool, nullptr);
+    } else if (op == "head") {
+      // Compute the type of the expression.
+      right->sem();
+      Type *operand_type = right->get_type();
+      // Check that the expression is a list.
+      if (operand_type->get_current_type() != TYPE_list) {
+        yyerror("Type mismatch. Expression after 'head' must be a list.");
+      }
+      // Check that the expression is not the 'nil' constant (empty list).
+      if (is_nil_constant(operand_type)) {
+        yyerror("Type mismatch. Expression after 'head' cannot be a 'nil' list.");
+      }
+      // The nested type of the expression is actually the type of the list's elements.
+      // NOTE: Maybe we should create a new type here, that is a copy of: 
+      // `operand->get_nested_type()`. This is because, if we add a destructor in class
+      // `Expr`, then the value of `type` may be deleted by multiple nodes.
+      type = operand_type->get_nested_type(); 
+    } else if (op == "tail") {
+      // Compute the type of the expression.
+      right->sem();
+      Type *operand_type = right->get_type();
+      // Check that the expression is a list.
+      if (operand_type->get_current_type() != TYPE_list) {
+        yyerror("Type mismatch. Expression after 'tail' must be a list.");
+      }
+      // Check that the expression is not the 'nil' constant (empty list).
+      if (is_nil_constant(operand_type)) {
+        yyerror("Type mismatch. Expression after 'tail' cannot be a 'nil' list.");
+      }
+      // The type of the expression is the type of the tail.
+      type = operand_type; 
+    } else if (op == "nil?") {
+      // Compute the type of the expression.
+      right->sem();
+      Type *operand_type = right->get_type();
+      if(operand_type->get_current_type() != TYPE_list) {
+        yyerror("Type mismatch. Expression after 'nil?' must be a list.");
+      }
+      type = new Type(TYPE_bool, nullptr); 
     }
   }
 private:
@@ -464,9 +508,6 @@ public:
     out << "\n<Assign>\n" << *atom << *expr << "\n</Assign>\n";
   }
   void sem() override {
-    // TODO: Here, we should `type_check` that `expr` has the same
-    // type as the `atom` that's on the left.
-    
     atom->sem();
     if (!expr->type_check(atom->get_type())) {
       yyerror("Atom on the left and expression on the right should \
