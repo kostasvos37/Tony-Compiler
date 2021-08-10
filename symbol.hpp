@@ -52,6 +52,13 @@ public:
         }
         return nullptr;
     }
+
+    SymbolEntry *lookupCurentScope(std::string c) {
+        SymbolEntry *e = scopes.back().lookup(c);
+        if (e!= nullptr) return e;
+        return nullptr;
+    }
+
     void insert(std::string c, Type* t){
         scopes.back().insert(c, t);
     }

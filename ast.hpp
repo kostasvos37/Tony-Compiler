@@ -85,8 +85,13 @@ public:
     st.insertIntoParentScope(var, type);
   }
 
+  std::string getName(){
+    return var;
+  }
+
   void sem() override {
     SymbolEntry *e = st.lookup(var);
+    if(e == nullptr) yyerror("Variable not found");
     type = e->type;
     // For testing:
     // std::cout << "I think i saw a variable: " << var << " with type " << type <<"!\n";
@@ -410,13 +415,11 @@ public:
 
   //This is fine, don't need pointers
   std::vector<Type *> getArgs(){
-    std::cout << "Hello there\n";
     std::vector<Type *> ret;
     for (Formal *f: formals){
       std::pair<Type*, int> p1 = f->getArgs(); 
       for (int i=0; i < p1.second; i++){
         ret.push_back(p1.first);
-        std::cout << p1.first << " ";
       }
     }
 
@@ -450,8 +453,54 @@ public:
 
   // To handle declarations and definitions
   // The way it is structured, the function adds its own header to above function's scope
-  // Declarations have headers too, but need to insert on same scope
-  void semHeader(bool overrideHeader = false) {
+  // Declarations have headers too, but need to insert on same scope, hence 2 different sem() functions
+  void semHeaderDecl() {
+
+    // Get arguments if any
+    
+    //This is not needed, since a decl doesn't put any variables in scope
+    //if (formals) formals->sem();
+
+    SymbolEntry *e = st.lookupCurentScope(id->getName());
+    if(e != nullptr) yyerror("Function already declared in this scope");
+    // Get arguments if any
+    std::vector<Type *> args;
+    if (formals){
+      args = formals->getArgs();
+    }
+    Type *fun;
+    if (isTyped){
+      fun = new Type(TYPE_function, nullptr, new Type(TYPE_void, nullptr), args, true);
+    }else{
+      fun = new Type(TYPE_function, nullptr, type, args, true); 
+    }
+    id->set_type(fun);
+    id->insertIntoScope();  
+  }
+
+  // TODO: Mulptiple DEFINITIONS (not declarations)
+  void semHeaderDef() {
+
+    SymbolEntry *e = st.lookup(id->getName());
+    if(e != nullptr) {
+      //Function either declared or defined
+      Type *t = e->type;
+      if(t->get_current_type()!= TYPE_function){
+        yyerror("Expected function type");
+      }
+
+      if(!t->isDeclared()){
+        //this means function is redefined
+        yyerror("Redefintion of function");
+      }
+
+      //TODO: Type check if the vars in declaration match the definition
+      t->toggleDeclDef();
+      if (formals) formals->sem();
+      return;
+    }
+
+    // Function was not previously defined/declared
 
     // Get arguments if any
     if (formals) formals->sem();
@@ -459,20 +508,14 @@ public:
     std::vector<Type *> args;
     if (formals){
       args = formals->getArgs();
-      for (auto i:args) std::cout << " " << i;
     }
     Type *fun;
     if (isTyped){
-      fun = new Type(TYPE_function, nullptr, new Type(TYPE_void, nullptr), args);
+      fun = new Type(TYPE_function, nullptr, new Type(TYPE_void, nullptr), args, false);
     }else{
-      fun = new Type(TYPE_function, nullptr, type, args); 
+      fun = new Type(TYPE_function, nullptr, type, args, false); 
     }
     id->set_type(fun);
-    
-    if(overrideHeader){
-      // header is called from function declaration, we insert it into current scope
-      id->insertIntoScope();
-    }
     
     if(st.hasParentScope()){
       id->insertIntoParentScope();
@@ -776,6 +819,10 @@ public:
     else
       out << "\n<FunctionCall>\n" << *name << *params << "\n</FunctionCall>\n";
   }
+
+  virtual void sem() override {
+    name->sem();
+  }
   
 private:
   Id *name;
@@ -793,7 +840,7 @@ public:
   }
 
   virtual void sem() override {
-    header->semHeader(true);
+    header->semHeaderDecl();
   }
 
 private:
@@ -832,9 +879,9 @@ public:
 
   virtual void sem() override {
     st.openScope();
-    header->semHeader();
+    header->semHeaderDef();
     for (AST *a : local_definitions) a->sem();
-    //body->sem();
+    body->sem();
     st.printSymbolTable();
     st.closeScope();
   }
