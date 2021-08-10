@@ -3,12 +3,16 @@
 #pragma once
 
 #include <iostream>
+#include <vector>
 
-enum TypeBlock {TYPE_int, TYPE_bool, TYPE_char, TYPE_array, TYPE_list, TYPE_void, TYPE_any};
+enum TypeBlock {TYPE_int, TYPE_bool, TYPE_char, TYPE_array, TYPE_list, TYPE_function, TYPE_void, TYPE_any};
+void yyerror(const char *);
 
 class Type {
 public:
     Type(TypeBlock current, Type *nested): current_type(current), nested_type(nested) {}
+    Type(TypeBlock current, Type *nested, Type *ret, std::vector<Type *> args): 
+    current_type(current), nested_type(nested), returnType(ret), function_args(args){    }
     ~Type() {delete nested_type;};
     TypeBlock get_current_type() {
         return current_type;
@@ -16,9 +20,23 @@ public:
     Type* get_nested_type() {
         return nested_type;
     }
-private:
+
+    Type *get_return_type() {
+        if (current_type != TYPE_function) yyerror("No return type for a non function");
+        return returnType;
+    }
+
+
+    std::vector<Type *> get_function_args (){
+      return function_args;
+    }
+protected:
     TypeBlock current_type;
     Type* nested_type;
+    
+    //For functions only
+    Type *returnType;
+    std::vector<Type *> function_args;
 };
 
 bool check_type_equality(Type* type1, Type* type2);
@@ -33,6 +51,12 @@ inline std::ostream& operator<< (std::ostream &out, Type* t) {
       case TYPE_char: out << "\"char\""; break;
       case TYPE_array: out << "array: "; break;
       case TYPE_list: out << "list: "; break;
+      case TYPE_function: {
+        out << "function -> : ;" << curr->get_return_type() << " parameters (";
+        for (auto i: curr->get_function_args()) out << i << ", ";
+        out << ")";} 
+      break;
+      case TYPE_void: out << "list: "; break;
       default: out << "\"invalid\""; break;
     }
     curr = curr->get_nested_type();

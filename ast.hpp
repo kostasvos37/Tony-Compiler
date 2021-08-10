@@ -313,7 +313,6 @@ private:
   Expr *right;
 };
 
-
 class VarList: public AST {
 public:
   VarList() {}
@@ -345,6 +344,13 @@ public:
     for (Id * i : ids) {i->set_type(type); i->insertIntoScope();}
   }
 
+  std::pair<Type*, int> getArgs(){
+    std::pair<Type*, int> p1;
+    p1.first = type;
+    p1. second = (int) ids.size();
+    return p1;
+  }
+
 protected:
   std::vector<Id *> ids;
   Type* type;
@@ -362,6 +368,11 @@ public:
   
   virtual void sem() override {
     varlist->sem();
+  }
+
+  //TODO: Handle refs
+  std::pair<Type*, int> getArgs(){
+    return varlist->getArgs();
   }
 private:
   VarList* varlist;
@@ -396,12 +407,26 @@ public:
   virtual void sem() override {
     for (Formal *f: formals) f->sem();
   }
+
+  //This is fine, don't need pointers
+  std::vector<Type *> getArgs(){
+    std::cout << "Hello there\n";
+    std::vector<Type *> ret;
+    for (Formal *f: formals){
+      std::pair<Type*, int> p1 = f->getArgs(); 
+      for (int i=0; i < p1.second; i++){
+        ret.push_back(p1.first);
+        std::cout << p1.first << " ";
+      }
+    }
+
+    return ret;
+  }
 private:
   std::vector<Formal *> formals;
 };
 
 
-// Sem should probably include name of header somewhere?
 class Header: public AST {
 public:
   Header(Type *t, Id *name, FormalList *f): type(t), formals(f), id(name), isTyped(true) {}
@@ -427,18 +452,32 @@ public:
   // The way it is structured, the function adds its own header to above function's scope
   // Declarations have headers too, but need to insert on same scope
   void semHeader(bool overrideHeader = false) {
-    if (isTyped){
-      id->set_type(type);
-    }else{
-      id->set_type(new Type(TYPE_void , nullptr));
+
+    // Get arguments if any
+    if (formals) formals->sem();
+
+    std::vector<Type *> args;
+    if (formals){
+      args = formals->getArgs();
+      for (auto i:args) std::cout << " " << i;
     }
+    Type *fun;
+    if (isTyped){
+      fun = new Type(TYPE_function, nullptr, new Type(TYPE_void, nullptr), args);
+    }else{
+      fun = new Type(TYPE_function, nullptr, type, args); 
+    }
+    id->set_type(fun);
+    
+    if(overrideHeader){
+      // header is called from function declaration, we insert it into current scope
+      id->insertIntoScope();
+    }
+    
     if(st.hasParentScope()){
       id->insertIntoParentScope();
     }
-    if(overrideHeader){
-      id->insertIntoScope();
-    }
-    if (formals) formals->sem();
+    
   }
 
 private:
@@ -447,7 +486,6 @@ private:
   Id *id;
   bool isTyped;
 };
-
 
 class Return: public Stmt{
 public:
@@ -796,7 +834,7 @@ public:
     st.openScope();
     header->semHeader();
     for (AST *a : local_definitions) a->sem();
-    body->sem();
+    //body->sem();
     st.printSymbolTable();
     st.closeScope();
   }

@@ -106,8 +106,9 @@ SymbolTable st;
 ==============================================*/
 
 Program:
-    Func_def {//$1->sem();
-        std::cout << *$1;
+    Func_def {
+        $1->sem();
+        //std::cout << *$1;
     }
 ;
 

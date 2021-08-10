@@ -50,7 +50,6 @@ public:
             SymbolEntry *e = i->lookup(c);
             if (e!= nullptr) return e;
         }
-        yyerror("Variable not found");
         return nullptr;
     }
     void insert(std::string c, Type* t){
