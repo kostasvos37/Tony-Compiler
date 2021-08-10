@@ -11,8 +11,8 @@ void yyerror(const char *);
 class Type {
 public:
     Type(TypeBlock current, Type *nested): current_type(current), nested_type(nested) {}
-    Type(TypeBlock current, Type *nested, Type *ret, std::vector<Type *> args): 
-    current_type(current), nested_type(nested), returnType(ret), function_args(args){    }
+    Type(TypeBlock current, Type *nested, Type *ret, std::vector<Type *> args, bool dec): 
+    current_type(current), nested_type(nested), returnType(ret), function_args(args), declDef(dec){    }
     ~Type() {delete nested_type;};
     TypeBlock get_current_type() {
         return current_type;
@@ -26,10 +26,16 @@ public:
         return returnType;
     }
 
-
     std::vector<Type *> get_function_args (){
       return function_args;
     }
+    bool isDeclared() {
+      return declDef;
+    }
+    void toggleDeclDef(){
+      declDef = !declDef;
+    }
+
 protected:
     TypeBlock current_type;
     Type* nested_type;
@@ -37,6 +43,7 @@ protected:
     //For functions only
     Type *returnType;
     std::vector<Type *> function_args;
+    bool declDef;
 };
 
 bool check_type_equality(Type* type1, Type* type2);
@@ -52,11 +59,11 @@ inline std::ostream& operator<< (std::ostream &out, Type* t) {
       case TYPE_array: out << "array: "; break;
       case TYPE_list: out << "list: "; break;
       case TYPE_function: {
-        out << "function -> : ;" << curr->get_return_type() << " parameters (";
+        out << "function ->" << curr->get_return_type() << ", parameters (";
         for (auto i: curr->get_function_args()) out << i << ", ";
         out << ")";} 
       break;
-      case TYPE_void: out << "list: "; break;
+      case TYPE_void: out << "void "; break;
       default: out << "\"invalid\""; break;
     }
     curr = curr->get_nested_type();

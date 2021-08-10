@@ -68,6 +68,13 @@ public:
     void insertIntoParentScope(std::string c, Type* t){
         scopes.at(scopes.size() -2).insert(c, t);
     }
+    SymbolEntry * lookupParentScope(std::string c){
+        if(hasParentScope()){
+            SymbolEntry *e = scopes.at(scopes.size() -2).lookup(c);
+            if (e!= nullptr) return e;
+        }
+        return nullptr;
+    }
     void openScope(){
         scopes.push_back(Scope());
     }
