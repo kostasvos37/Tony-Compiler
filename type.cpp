@@ -1,8 +1,6 @@
 #include <iostream>
 #include "type.hpp"
 
-using namespace std;
-
 bool check_type_equality(Type* type1, Type* type2) {
     if (type1->get_current_type() == TYPE_any || type2->get_current_type() == TYPE_any) {
         return true;
@@ -14,6 +12,22 @@ bool check_type_equality(Type* type1, Type* type2) {
         (type1->get_nested_type() != nullptr && type2->get_nested_type() == nullptr)) {
         return false;
     }
+
+    // function type checks
+    if(type1->get_current_type()==TYPE_function){
+        if(!check_type_equality(type1->get_return_type(), type2->get_return_type()))
+            return false;
+        std::vector<Type *> args1 = type1->get_function_args();
+        std::vector<Type *> args2 = type2->get_function_args();
+        if(args1.size() != args2.size())
+            return false;
+        for(int i=0; i< (int) args1.size(); i++){
+            if (!check_type_equality(args1[i], args2[i]))
+                return false;
+        }
+        // all good until here, rest should be empty
+    }
+
     if (type1->get_nested_type() == nullptr && type2->get_nested_type() == nullptr) {
         return true;
     }

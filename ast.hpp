@@ -461,15 +461,13 @@ public:
     //This is not needed, since a decl doesn't put any variables in scope
     //if (formals) formals->sem();
 
-    SymbolEntry *e = st.lookupCurentScope(id->getName());
-    if(e != nullptr) yyerror("Function already declared in this scope");
     // Get arguments if any
     std::vector<Type *> args;
     if (formals){
       args = formals->getArgs();
     }
     Type *fun;
-    if (isTyped){
+    if (!isTyped){
       fun = new Type(TYPE_function, nullptr, new Type(TYPE_void, nullptr), args, true);
     }else{
       fun = new Type(TYPE_function, nullptr, type, args, true); 
@@ -480,8 +478,23 @@ public:
 
   // TODO: Mulptiple DEFINITIONS (not declarations)
   void semHeaderDef() {
+    // Get arguments if any
+    if (formals) formals->sem();
 
-    SymbolEntry *e = st.lookup(id->getName());
+    std::vector<Type *> args;
+    if (formals){
+      args = formals->getArgs();
+    }
+    Type *fun;
+    if (!isTyped){
+      fun = new Type(TYPE_function, nullptr, new Type(TYPE_void, nullptr), args, true);
+    }else{
+      fun = new Type(TYPE_function, nullptr, type, args, true); 
+    }
+    id->set_type(fun);
+    
+    // Check if function is previously defined
+    SymbolEntry *e = st.lookupParentScope(id->getName());
     if(e != nullptr) {
       //Function either declared or defined
       Type *t = e->type;
@@ -491,32 +504,17 @@ public:
 
       if(!t->isDeclared()){
         //this means function is redefined
-        yyerror("Redefintion of function");
       }
 
       //TODO: Type check if the vars in declaration match the definition
       t->toggleDeclDef();
-      if (formals) formals->sem();
+      if(!check_type_equality(t, fun)){
+        yyerror("Function definition different from declaration");
+      }
       return;
     }
 
-    // Function was not previously defined/declared
 
-    // Get arguments if any
-    if (formals) formals->sem();
-
-    std::vector<Type *> args;
-    if (formals){
-      args = formals->getArgs();
-    }
-    Type *fun;
-    if (isTyped){
-      fun = new Type(TYPE_function, nullptr, new Type(TYPE_void, nullptr), args, false);
-    }else{
-      fun = new Type(TYPE_function, nullptr, type, args, false); 
-    }
-    id->set_type(fun);
-    
     if(st.hasParentScope()){
       id->insertIntoParentScope();
     }
