@@ -801,6 +801,10 @@ public:
   std::vector<Expr*> get_expr_list(){
     return expressions;
   }
+
+  virtual void sem() override {
+    for (auto i : expressions) i->sem();
+  }
 private:
   std::vector<Expr*> expressions;
 };
@@ -820,8 +824,28 @@ public:
 
   virtual void sem() override {
     name->sem();
+
+    if (name->get_type()->get_current_type() != TYPE_function)
+      yyerror("Function call, expected a function");
+    std::vector<Type *> args = name->get_type()->get_function_args();
+    std::vector<Expr*> expressions;
+    if (hasParams){
+      expressions = params->get_expr_list();
+    }
+
+    if(expressions.size() != args.size()){
+      yyerror("Function call: Different number of arguments than expected");
+    }
+
+    for (int i=0; i<(int) args.size();++i){
+      expressions[i]->sem();
+      if(!check_type_equality(args[i],expressions[i]->get_type())){
+        yyerror("Function call: Different argument type than expected");
+      }
+    }
+    type = name->get_type()->get_return_type();
   }
-  
+
 private:
   Id *name;
   ExprList *params;
