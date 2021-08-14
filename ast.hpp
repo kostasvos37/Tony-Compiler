@@ -599,12 +599,15 @@ private:
 };
 
 
-class Skip: public Simple{
+class Skip: public Simple {
 public:
   Skip() {}
+  
   void printOn(std::ostream &out) const override {
     out << "\n<Skip>\n";
   }
+
+  void sem() override {}
 };
 
 
@@ -741,7 +744,6 @@ public:
   void reverse(){
     std::reverse(simples.begin(), simples.end());
   }
-  
 
   void printOn(std::ostream &out) const override {
     out << "\n<SimplesList>\n";
@@ -753,6 +755,12 @@ public:
   std::vector<Simple *> get_simples_list(){
     return simples;
   }
+
+  void sem() override {
+    for (Simple *s : simples) {
+      s->sem();
+    }
+  }
 private:
   std::vector<Simple *> simples;
 };
@@ -761,20 +769,29 @@ private:
 class For: public Stmt {
 public:
   For(SimpleList *sl1, Expr *e, SimpleList *sl2, StmtBody *sb):
-    simple_list1(sl1), expr(e), simple_list2(sl2), stmt_body(sb)  {}
+    simple_list_1(sl1), expr(e), simple_list_2(sl2), stmt_body(sb) {}
   ~For() {
-    delete simple_list1;
+    delete simple_list_1;
     delete expr;
-    delete simple_list2;
-    delete stmt_body; }
+    delete simple_list_2;
+    delete stmt_body;
+  }
+
   void printOn(std::ostream &out) const override {
-    out << "\n<For>\n" << *simple_list1 << *expr << *simple_list2  << *stmt_body << "\n</For>\n";
+    out << "\n<For>\n" << *simple_list_1 << *expr << *simple_list_2  << *stmt_body << "\n</For>\n";
+  }
+
+  void sem() override {
+    simple_list_1->sem();
+    expr->sem();
+    simple_list_2->sem();
+    stmt_body->sem();
   }
 
 private:
-  SimpleList *simple_list1;
+  SimpleList *simple_list_1;
   Expr *expr;
-  SimpleList *simple_list2;
+  SimpleList *simple_list_2;
   StmtBody *stmt_body;
 };
 
