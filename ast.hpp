@@ -109,9 +109,16 @@ public:
     out << "\n<ArrayElement>\n" << *atom << "\n" << *expr << "\n</ArrayElement>\n";
   }
   void sem() override {
-    // FIXME: `type` here should be the type of the element of the array not the type
-    // of the array itself.
-    type = new Type(TYPE_array, nullptr);
+  atom->sem();
+  if(atom->get_type()->get_current_type()!=TYPE_array){
+    yyerror("Accessing array value of non-array object");
+  }
+  expr->sem();
+  if(expr->get_type()->get_current_type() != TYPE_int){
+    yyerror("Array index not an integer");
+  }
+
+  type = atom->get_type()->get_nested_type();
   }
 private:
   Atom *atom;
@@ -124,6 +131,10 @@ public:
   StringLiteral(std::string str): strlit(str) {}
   void printOn(std::ostream &out) const override {
     out << "<String value=\"" << strlit << "\"> ";
+  }
+
+  virtual void sem() override {
+    type = new Type(TYPE_array, new Type(TYPE_char, nullptr));
   }
 private:
   std::string strlit;
@@ -433,7 +444,7 @@ private:
 class Header: public AST {
 public:
   Header(Type *t, Id *name, FormalList *f): type(t), formals(f), id(name), isTyped(true) {}
-  Header(Id *name, FormalList *f): formals(f), id(name), isTyped(false) {}
+  Header(Id *name, FormalList *f): formals(f), id(name), isTyped(false) {type = new Type(TYPE_void, nullptr);}
   ~Header(){ delete formals; delete id;}
   void printOn(std::ostream &out) const override {
     out << "<Header>\n"; 
@@ -450,6 +461,8 @@ public:
     }
     out << "\n</Header>\n";
   }
+
+  Type *getType() {return type;}
 
   // To handle declarations and definitions
   // The way it is structured, the function adds its own header to above function's scope
@@ -535,6 +548,13 @@ public:
   void printOn(std::ostream &out) const override {
     out << "\n<Return>\n" << *ret_expr << "\n</Return>\n";
   }
+
+  virtual void sem() override {
+    ret_expr->sem();
+    if(!check_type_equality(ret_expr->get_type(), st.getCurrentScopeReturnType())){
+        yyerror("Return type different than the one declared.");
+      }
+  }
 private:
   Expr* ret_expr;
 };
@@ -589,8 +609,7 @@ public:
   void sem() override {
     atom->sem();
     if (!expr->type_check(atom->get_type())) {
-      yyerror("Atom on the left and expression on the right should \
-               have the same type during assignment.\n");
+      yyerror("Atom on the left and expression on the right should have the same type during assignment.");
     }
   }
 private:
@@ -727,6 +746,16 @@ public:
     out << "\n</If>\n";
   }
 
+  virtual void sem() override {
+    for(int i=0; i<(int) conditions.size(); i++){
+      conditions[i]->sem();
+      if(conditions[i]->get_type()->get_current_type() != TYPE_bool)
+        yyerror("If condition not boolean.");
+      
+      statements[i]->sem();
+    }
+  }
+
 private:
   std::vector<Expr *>     conditions;
   std::vector<StmtBody *> statements;
@@ -784,6 +813,9 @@ public:
   void sem() override {
     simple_list_1->sem();
     expr->sem();
+    if(expr->get_type()->get_current_type() != TYPE_bool){
+      yyerror("For condition is not boolean.");
+    }
     simple_list_2->sem();
     stmt_body->sem();
   }
@@ -917,7 +949,7 @@ public:
   }
 
   virtual void sem() override {
-    st.openScope();
+    st.openScope(header->getType());
     header->semHeaderDef();
     for (AST *a : local_definitions) a->sem();
     body->sem();

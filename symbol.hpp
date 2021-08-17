@@ -18,11 +18,10 @@ struct SymbolEntry {
 
 class Scope {
 public:
-    Scope() : locals(), size(0) {}
+    Scope(Type *t) : locals(), size(0), returnType(t) {}
     SymbolEntry *lookup(std::string c) {
         if (locals.find(c) == locals.end()) {return nullptr;}
         return &locals[c];
-        
     }
         
     void insert(std::string c, Type* t){
@@ -31,6 +30,7 @@ public:
         ++size;
     }
     int getSize() const { return size; }
+    Type *getReturnType() { return returnType;}
 
     //For testing
     void printScope(int ident) { 
@@ -41,6 +41,8 @@ public:
 private:
     std::map<std::string, SymbolEntry> locals;
     int size;
+    Type *returnType;
+
 };
 
 class SymbolTable{
@@ -75,8 +77,8 @@ public:
         }
         return nullptr;
     }
-    void openScope(){
-        scopes.push_back(Scope());
+    void openScope(Type *t){
+        scopes.push_back(Scope(t));
     }
     void closeScope(){
         scopes.pop_back();
@@ -84,6 +86,11 @@ public:
     int getSizeOfCurrentScope() const {
         return scopes.back().getSize();
     }
+
+    Type *getCurrentScopeReturnType (){
+        return scopes.back().getReturnType();
+    }
+
     //For testing
     void printSymbolTable(){
         std::cout << "Printing symbol table" << std::endl;

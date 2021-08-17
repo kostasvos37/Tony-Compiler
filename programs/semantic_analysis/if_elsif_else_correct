@@ -1,0 +1,13 @@
+def main():
+    int n
+    if n < 0:
+        skip
+    elsif n < 2:
+        skip
+    elsif n = 2:
+        skip
+    elsif n mod 2 = 0: skip
+    else:
+        skip
+    end
+end

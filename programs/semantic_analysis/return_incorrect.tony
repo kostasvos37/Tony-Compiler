@@ -1,0 +1,10 @@
+def putc(char d):
+  int c
+  char k
+  char [] a
+  def char someFunction (int par1; char par2):
+    par2 := 'c'
+    return par1
+  end
+  k := 'a'
+end

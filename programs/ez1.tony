@@ -1,9 +1,5 @@
-def putc(char d,e):
-  int a
-  bool b,c
-  def bool? ():
-    int c, f
-    f := c
-  end
-  x:=a
+def main():
+    int [] n
+    int y
+    y := n[8]
 end
