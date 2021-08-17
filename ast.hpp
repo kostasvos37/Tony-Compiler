@@ -176,6 +176,13 @@ public:
   void printOn(std::ostream &out) const override {
     out << "<New> " << type_of_elems << *expr << "</New> ";
   }
+
+  virtual void sem() override {
+    expr->sem();
+    if(expr->get_type()->get_current_type() != TYPE_int){
+      yyerror("Array index not an integer");
+    }
+  }
 private:
   Type *type_of_elems;
   Expr *expr;
@@ -565,6 +572,13 @@ public:
   Exit() {}
   void printOn(std::ostream &out) const override {
     out << "\n<Exit>\n";
+  }
+
+  virtual void sem() override{
+    Type *t = st.getCurrentScopeReturnType();
+    if(t->get_current_type() != TYPE_void){
+        yyerror("Exit from a typed function.");
+    }
   }
 };
 
