@@ -60,6 +60,8 @@ class Stmt: public AST {
 
 
 class Atom: public Expr { 
+public:
+  virtual bool isLvalue() {return false;}
 };
 
 
@@ -96,6 +98,10 @@ public:
     // For testing:
     // std::cout << "I think i saw a variable: " << var << " with type " << type <<"!\n";
   }
+
+  virtual bool isLvalue() override{
+    return true;
+  }
 private:
   std::string var;
 };
@@ -120,6 +126,10 @@ public:
 
   type = atom->get_type()->get_nested_type();
   }
+
+  virtual bool isLvalue() override {
+    return true;
+  }
 private:
   Atom *atom;
   Expr *expr;
@@ -135,6 +145,10 @@ public:
 
   virtual void sem() override {
     type = new Type(TYPE_array, new Type(TYPE_char, nullptr));
+  }
+
+  virtual bool isLvalue() override {
+    return false;
   }
 private:
   std::string strlit;
@@ -630,6 +644,9 @@ public:
     if (!expr->type_check(atom->get_type())) {
       yyerror("Atom on the left and expression on the right should have the same type during assignment.");
     }
+    if(!atom->isLvalue()){
+      yyerror("Atom is not a valid l-value.");
+    }
   }
 private:
   Atom *atom;
@@ -912,6 +929,10 @@ public:
       }
     }
     type = name->get_type()->get_return_type();
+  }
+
+  virtual bool isLvalue() override {
+    return false;
   }
 
 private:
