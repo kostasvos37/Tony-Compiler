@@ -541,6 +541,10 @@ public:
     
   }
 
+  bool getIsTyped(){
+    return isTyped;
+  }
+
 private:
   Type *type;
   FormalList *formals;
@@ -561,6 +565,7 @@ public:
     if(!check_type_equality(ret_expr->get_type(), st.getCurrentScopeReturnType())){
         yyerror("Return type different than the one declared.");
       }
+    st.setScopeHasReturn();
   }
 private:
   Expr* ret_expr;
@@ -967,6 +972,9 @@ public:
     header->semHeaderDef();
     for (AST *a : local_definitions) a->sem();
     body->sem();
+    if(header->getIsTyped() && !st.getScopeHasReturn()){
+      yyerror("No return value on typed function.");
+    }
     st.printSymbolTable();
     st.closeScope();
   }

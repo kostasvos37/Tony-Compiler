@@ -18,7 +18,7 @@ struct SymbolEntry {
 
 class Scope {
 public:
-    Scope(Type *t) : locals(), size(0), returnType(t) {}
+    Scope(Type *t) : locals(), size(0), returnType(t), hasReturn(false) {}
     SymbolEntry *lookup(std::string c) {
         if (locals.find(c) == locals.end()) {return nullptr;}
         return &locals[c];
@@ -38,11 +38,17 @@ public:
             std::cout << std::string(ident*4, ' ') << i->first << " " << i->second.type << std::endl;
         }  
     }
+    void setHasReturn(){
+        hasReturn = true;
+    }
+    bool getHasReturn(){
+        return hasReturn;
+    }
 private:
     std::map<std::string, SymbolEntry> locals;
     int size;
     Type *returnType;
-
+    bool hasReturn;
 };
 
 class SymbolTable{
@@ -89,6 +95,14 @@ public:
 
     Type *getCurrentScopeReturnType (){
         return scopes.back().getReturnType();
+    }
+
+    void setScopeHasReturn(){
+        scopes.back().setHasReturn();
+    }
+
+    bool getScopeHasReturn(){
+        return scopes.back().getHasReturn();
     }
 
     //For testing

@@ -111,7 +111,6 @@ unsigned char fixSingleChar(char *str){
   
   str++;
   str[strlen(str)-1] = '\0';
-  printf("%s", str);
   if(str[0] != '\\') return (unsigned char) str[0];
   str++;
   unsigned char x;
@@ -128,7 +127,6 @@ unsigned char fixSingleChar(char *str){
       char msg[50]; 
       sprintf(msg, "Lexer error: Unexpected token at line %d\n", linecount); 
       yyerror(msg); 
-      exit (1);
       break;
   }
 }
