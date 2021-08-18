@@ -696,7 +696,6 @@ public:
     void printOn(std::ostream &out) const override {
     // This is never used
     out << "<Elsif> </Elsif>";
-    
   }
 
 private:
@@ -728,7 +727,6 @@ public:
 
   // This is never used, only for testing
   void printOn(std::ostream &out) const override {
-    
     if(!else_stmt.empty()){
       out << "\n<Else>\n" << *else_stmt[0] << "\n</Else>\n";
     }
@@ -741,10 +739,11 @@ private:
 
 class If: public Stmt {
 public:
-  If(Expr *if_condition, StmtBody *if_stmt_body, Elsif * elsif_stmt, Else *else_stmt){
+  If(Expr *if_condition, StmtBody *if_stmt_body, Elsif *elsif_stmt, Else *else_stmt){
     conditions.push_back(if_condition);
     statements.push_back(if_stmt_body);
     
+    // TODO: There might exist a more efficient way to do this.
     std::vector<Expr *> elsif_conds = elsif_stmt->get_conds();
     std::vector<StmtBody *> elsif_stmt_bodies = elsif_stmt->get_stmt_bodies();
     for(int i=0; i < (int) elsif_conds.size(); i++){
@@ -782,12 +781,12 @@ public:
     out << "\n</If>\n";
   }
 
-  virtual void sem() override {
-    for(int i=0; i<(int) conditions.size(); i++){
-      conditions[i]->sem();
-      if(conditions[i]->get_type()->get_current_type() != TYPE_bool)
-        yyerror("If condition not boolean.");
-      
+  void sem() override {
+    // Type-check all conditions and call `sem()` for all statements.
+    for(int i=0; i<(int) conditions.size(); i++) {
+      if(!conditions[i]->type_check(TYPE_bool)) {
+        yyerror("Type mismatch. 'If-condition' is not boolean.");
+      }
       statements[i]->sem();
     }
   }
