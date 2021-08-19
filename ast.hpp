@@ -11,6 +11,7 @@
 #include "symbol.hpp"
 #include "type.hpp"
 
+
 void yyerror(const char *msg);
 
 bool check_type_equality(Type* type1, Type* type2);
@@ -93,7 +94,10 @@ public:
 
   void sem() override {
     SymbolEntry *e = st.lookup(var);
-    if(e == nullptr) yyerror("Variable not found");
+    if(e == nullptr) {
+      std::cout << var << "\n";
+      yyerror("Variable not found!");
+    } 
     type = e->type;
     // For testing:
     // std::cout << "I think i saw a variable: " << var << " with type " << type <<"!\n";
@@ -191,11 +195,12 @@ public:
     out << "<New> " << type_of_elems << *expr << "</New> ";
   }
 
-  virtual void sem() override {
+  void sem() override {
     expr->sem();
     if(expr->get_type()->get_current_type() != TYPE_int){
       yyerror("Array index not an integer");
     }
+    type = new Type(TYPE_array, type_of_elems);
   }
 private:
   Type *type_of_elems;
@@ -353,17 +358,22 @@ private:
 class VarList: public AST {
 public:
   VarList() {}
-  ~VarList(){
+  ~VarList() {
     for (Id * i : ids) delete i;
   }
+
   void append(Id * id) {
     ids.push_back(id);
   }
   
-  void reverse(){
+  void reverse() {
     std::reverse(ids.begin(), ids.end());
   }
   
+  /*
+   This is a method that is called in `parser.y` to set the type of the
+   `VarList`, after the `ids` vector is filled with all the variables.
+   */
   void set_type(Type* t) {
     type = t;
   }
@@ -377,14 +387,14 @@ public:
     out << "\n</VarList>\n";
   }
   
-  virtual void sem() override {
+  void sem() override {
     for (Id * i : ids) {i->set_type(type); i->insertIntoScope();}
   }
 
   std::pair<Type*, int> getArgs(){
     std::pair<Type*, int> p1;
     p1.first = type;
-    p1. second = (int) ids.size();
+    p1.second = (int) ids.size();
     return p1;
   }
 
@@ -394,33 +404,32 @@ protected:
 };
 
 
-
 class Formal: public AST {
 public:
-  Formal(VarList* v, bool isref): varlist(v), isRef(isref) {}
-  ~Formal() {delete varlist;}
+  Formal(VarList* v, bool i): var_list(v), is_ref(i) {}
+  ~Formal() {delete var_list;}
   void printOn(std::ostream &out) const override {
-    out << "\n<Formal isRef=\"" << (isRef ? "yes" : "no") << "\">\n" << *varlist << "</Formal>";
+    out << "\n<Formal isRef=\"" << (is_ref ? "yes" : "no") << "\">\n" << *var_list << "</Formal>";
   }
   
-  virtual void sem() override {
-    varlist->sem();
+  void sem() override {
+    var_list->sem();
   }
 
   //TODO: Handle refs
-  std::pair<Type*, int> getArgs(){
-    return varlist->getArgs();
+  std::pair<Type*, int> getArgs() {
+    return var_list->getArgs();
   }
 private:
-  VarList* varlist;
-  bool isRef;
+  VarList* var_list;
+  bool is_ref;
 };
 
 
 class FormalList: public AST {
 public:
   FormalList() {}
-  ~FormalList(){
+  ~FormalList() {
     for (Formal * f : formals) delete f;
   }
 
