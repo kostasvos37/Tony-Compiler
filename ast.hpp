@@ -95,8 +95,7 @@ public:
   void sem() override {
     SymbolEntry *e = st.lookup(var);
     if(e == nullptr) {
-      std::cout << var << "\n";
-      yyerror("Variable not found!");
+      yyerror("Variable \"%s\" not found!", var.c_str());
     } 
     type = e->type;
     // For testing:
@@ -121,11 +120,11 @@ public:
   void sem() override {
   atom->sem();
   if(atom->get_type()->get_current_type()!=TYPE_array){
-    yyerror("Accessing array value of non-array object");
+    yyerror("Accessing array value of non-array object.");
   }
   expr->sem();
   if(expr->get_type()->get_current_type() != TYPE_int){
-    yyerror("Array index not an integer");
+    yyerror("Expected %s to be of type integer");
   }
 
   type = atom->get_type()->get_nested_type();
@@ -1085,7 +1084,7 @@ public:
     if(header->getIsTyped() && !st.getScopeHasReturn()){
       yyerror("No return value on typed function.");
     }
-    st.printSymbolTable();
+    //st.printSymbolTable();
     st.closeScope();
   }
 

@@ -4,7 +4,7 @@
 #include "ast.hpp"
 #include "lexer.hpp"
 #include "symbol.hpp"
-
+extern FILE *yyin;
 SymbolTable st;
 %}
 
@@ -108,6 +108,8 @@ SymbolTable st;
 Program:
     Func_def {
         $1->sem();
+        delete $1;
+        std::cout << "Semantic analysis done!\n";
         //std::cout << *$1;
     }
 ;
@@ -268,6 +270,15 @@ Expr:
 
 %%
 
-int main(){
-    int result = yyparse();
+int main(int argc, char **argv){
+    if(argc < 2){
+        yyerror("No input file provided");
+    }
+    FILE *pt = fopen(argv[1], "r" );
+    if(pt==nullptr){
+        yyerror("Input file couldnn't be opened");
+    }
+    yyin = pt;
+    yyparse();    
+    fclose(pt);
 }
