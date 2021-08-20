@@ -1,6 +1,7 @@
 %{
 #include <cstdio>
 #include <cstdlib>
+#include <stdarg.h>
 #include "ast.hpp"
 #include "lexer.hpp"
 #include "parser.hpp"
@@ -97,13 +98,18 @@ P [\x20-\x7e]
 {W}+                    {/* nothing */ }
 \n			                {linecount++;}
 
-.                       {char msg[50]; sprintf(msg, "Lexer error: Unexpected token at line %d", linecount); yyerror(msg); exit (1);}
+.                       {yyerror("Lexer error: Unexpected token at line %d", linecount); exit (1);}
 
 %%
 
 //TODO: Fix to add lines
-void yyerror(const char *msg) {
-  fprintf(stderr, "Error : %s\n", msg);
+void yyerror(const char *msg, ...) {
+  va_list argptr;
+  fprintf(stderr, "Error: ");
+  va_start(argptr, msg);
+  vfprintf(stderr, msg, argptr);
+  va_end(argptr);
+  fprintf(stderr, "\n");
   exit(1);
 }
 
@@ -124,9 +130,8 @@ unsigned char fixSingleChar(char *str){
     case '\"': return '\"';
     case 'x': str++; x = (unsigned char) strtol(str, NULL, 16); return x; break;
     default : 
-      char msg[50]; 
-      sprintf(msg, "Lexer error: Unexpected token at line %d\n", linecount); 
-      yyerror(msg); 
+      yyerror("Lexer error: Unexpected token at line %d", linecount); 
+      return '\0';
       break;
   }
 }

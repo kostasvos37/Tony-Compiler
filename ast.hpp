@@ -12,7 +12,7 @@
 #include "type.hpp"
 
 
-void yyerror(const char *msg);
+void yyerror(const char *msg, ...);
 
 bool check_type_equality(Type* type1, Type* type2);
 bool is_nil_constant(Type *type);
@@ -974,6 +974,83 @@ public:
     for (AST *a : local_definitions) delete a;
   }
 
+  void initFunctions(){
+    //puti
+    std::vector<Type*> v {new Type(TYPE_int, nullptr)};
+    st.insert(std::string("puti"), new Type(TYPE_function, nullptr,new Type(TYPE_void, nullptr), v, true));
+    //putc
+    v.clear();
+    v.push_back(new Type(TYPE_char, nullptr));
+    st.insert(std::string("putc"), new Type(TYPE_function, nullptr,new Type(TYPE_void, nullptr), v, true));
+
+    //putb
+    v.clear();
+    v.push_back(new Type(TYPE_bool, nullptr));
+    st.insert(std::string("putb"), new Type(TYPE_function, nullptr,new Type(TYPE_void, nullptr), v, true));
+    
+    //puts
+    v.clear();
+    v.push_back(new Type(TYPE_array, new Type(TYPE_char, nullptr)));
+    st.insert(std::string("puts"), new Type(TYPE_function, nullptr,new Type(TYPE_void, nullptr), v, true));
+
+    //geti
+    v.clear();
+    st.insert(std::string("geti"), new Type(TYPE_function, nullptr, new Type(TYPE_int, nullptr), v, true));
+
+    //getb
+    v.clear();
+    st.insert(std::string("getb"), new Type(TYPE_function, nullptr, new Type(TYPE_bool, nullptr), v, true));
+
+    //getc
+    v.clear();
+    st.insert(std::string("getc"), new Type(TYPE_function, nullptr, new Type(TYPE_char, nullptr), v, true));
+
+    //gets
+    v.clear();
+    v.push_back(new Type(TYPE_int, nullptr));
+    v.push_back(new Type(TYPE_array, new Type(TYPE_char, nullptr)));
+    st.insert(std::string("gets"), new Type(TYPE_function, nullptr, new Type(TYPE_void, nullptr), v, true));
+
+    //abs
+    v.clear();
+    v.push_back(new Type(TYPE_int, nullptr));
+    st.insert(std::string("abs"), new Type(TYPE_function, nullptr, new Type(TYPE_int, nullptr), v, true));
+
+    //ord
+    v.clear();
+    v.push_back(new Type(TYPE_char, nullptr));
+    st.insert(std::string("ord"), new Type(TYPE_function, nullptr, new Type(TYPE_int, nullptr), v, true));
+
+    //chr
+    v.clear();
+    v.push_back(new Type(TYPE_int, nullptr));
+    st.insert(std::string("chr"), new Type(TYPE_function, nullptr, new Type(TYPE_char, nullptr), v, true));
+
+    //strlen
+    v.clear();
+    v.push_back(new Type(TYPE_array, new Type(TYPE_char, nullptr)));
+    st.insert(std::string("strlen"), new Type(TYPE_function, nullptr, new Type(TYPE_int, nullptr), v, true));
+
+    //strcmp
+    v.clear();
+    v.push_back(new Type(TYPE_array, new Type(TYPE_char, nullptr)));
+    v.push_back(new Type(TYPE_array, new Type(TYPE_char, nullptr)));
+    st.insert(std::string("strcmp"), new Type(TYPE_function, nullptr, new Type(TYPE_int, nullptr), v, true));
+
+    //strcpy
+    v.clear();
+    v.push_back(new Type(TYPE_array, new Type(TYPE_char, nullptr)));
+    v.push_back(new Type(TYPE_array, new Type(TYPE_char, nullptr)));
+    st.insert(std::string("strcpy"), new Type(TYPE_function, nullptr, new Type(TYPE_void, nullptr), v, true));
+
+    //strcat
+    v.clear();
+    v.push_back(new Type(TYPE_array, new Type(TYPE_char, nullptr)));
+    v.push_back(new Type(TYPE_array, new Type(TYPE_char, nullptr)));
+    st.insert(std::string("strcat"), new Type(TYPE_function, nullptr, new Type(TYPE_void, nullptr), v, true));
+
+  }
+
   void append(AST* a) {
     local_definitions.push_back(a);
   }
@@ -998,6 +1075,10 @@ public:
 
   virtual void sem() override {
     st.openScope(header->getType());
+  
+    if(!st.hasParentScope()){
+      initFunctions();
+    }
     header->semHeaderDef();
     for (AST *a : local_definitions) a->sem();
     body->sem();

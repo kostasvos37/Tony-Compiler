@@ -8,7 +8,7 @@
 #include "type.hpp"
 #include <string>
 
-void yyerror(const char *msg);
+void yyerror(const char *msg, ...);
 
 struct SymbolEntry {
     Type* type;
@@ -70,6 +70,8 @@ public:
     void insert(std::string c, Type* t){
         scopes.back().insert(c, t);
     }
+    // This probably doesn't belong here, but works for now
+
     bool hasParentScope(){
         return scopes.size() > 1;
     }
