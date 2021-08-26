@@ -1,5 +1,5 @@
 #!/bin/bash
 
-./minibasic < $1 > a.s
-as -o a.o a.s
-ld -o a.out a.o libminibasic.a
+./minibasic < $1 > a.ll
+llc a.ll -o a.s
+clang -o a.out a.s libminibasic.a -lgc

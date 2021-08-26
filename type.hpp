@@ -22,7 +22,7 @@ public:
     }
 
     Type *get_return_type() {
-        if (current_type != TYPE_function) yyerror("No return type for a non function");
+        if (current_type != TYPE_function) yyerror("No return type for a non function type.");
         return returnType;
     }
 

@@ -1,7 +1,10 @@
 .PHONY: clean distclean default
 
-CXX=c++
-CXXFLAGS=-Wall -std=c++11
+LLVMCONFIG=llvm-config-12
+
+CXX=clang++
+CXXFLAGS=-Wall -std=c++11 -g `$(LLVMCONFIG) --cxxflags`
+LDFLAGS=`$(LLVMCONFIG) --ldflags --system-libs --libs all`
 
 default: tony
 
@@ -19,7 +22,7 @@ parser.hpp parser.cpp: parser.y
 parser.o: parser.cpp lexer.hpp
 
 tony: lexer.o parser.o
-	$(CXX) $(CXXFLAGS) -o tony lexer.o parser.o type.cpp
+	$(CXX) $(CXXFLAGS) -o tony type.cpp $^ $(LDFLAGS)
 
 lextest: lexer_pure.cpp
 	$(CXX) $(CXXFLAGS) -o lextest lexer_pure.cpp
