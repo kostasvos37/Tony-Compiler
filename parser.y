@@ -61,7 +61,7 @@ SymbolTable st;
     Simple *simple;
     Stmt *stmt;
     StmtBody *stmtbody;
-    Type *type;
+    TonyType *type;
     VarList *varlist;
     Formal *formal;
     FormalList *formallist;
@@ -157,11 +157,11 @@ Var_Comma:
 ;
 
 Type:
-    "int"   {$$ = new Type(TYPE_int, nullptr);}
-|   "char"  {$$ = new Type(TYPE_char, nullptr);}
-|   "bool"  {$$ = new Type(TYPE_bool, nullptr);}
-|   Type '[' ']'        {$$ = new Type(TYPE_array, $1);}
-|   "list" '[' Type ']' {$$ = new Type(TYPE_list, $3);}
+    "int"   {$$ = new TonyType(TYPE_int, nullptr);}
+|   "char"  {$$ = new TonyType(TYPE_char, nullptr);}
+|   "bool"  {$$ = new TonyType(TYPE_bool, nullptr);}
+|   Type '[' ']'        {$$ = new TonyType(TYPE_array, $1);}
+|   "list" '[' Type ']' {$$ = new TonyType(TYPE_list, $3);}
 ;
 
 Stmt:

@@ -10,12 +10,23 @@
 #include <algorithm>
 #include "symbol.hpp"
 #include "type.hpp"
-
+#include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/APInt.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/Verifier.h"
 
 void yyerror(const char *msg, ...);
 
-bool check_type_equality(Type* type1, Type* type2);
-bool is_nil_constant(Type *type);
+bool check_type_equality(TonyType* type1, TonyType* type2);
+bool is_nil_constant(TonyType *type);
 
 class AST {
 public:
@@ -23,6 +34,38 @@ public:
   virtual void printOn(std::ostream &out) const = 0;
   virtual void sem() {}; // NOTE: After we implement `sem()` for all the subclasses
                          // it would make sense to make this: `virtual void sem() = 0`.
+  //void llvm_compile_and_dump(){
+    // Initialize
+    /* TheModule = make_unique<Module>("minibasic program", TheContext);
+    TheFPM = make_unique<legacy::FunctionPassManager>(TheModule.get());
+    if (optimize) {
+      TheFPM->add(createPromoteMemoryToRegisterPass());
+      TheFPM->add(createInstructionCombiningPass());
+      TheFPM->add(createReassociatePass());
+      TheFPM->add(createGVNPass());
+      TheFPM->add(createCFGSimplificationPass());
+    }
+    TheFPM->doInitialization();
+    i1 = IntegerType::get(TheContext, 1);
+    i8 = IntegerType::get(TheContext, 8);
+    i32 = IntegerType::get(TheContext, 32);
+    i64 = IntegerType::get(TheContext, 64);
+  } */
+  /* 
+  virtual Value *compile(); */
+protected:
+  
+  static llvm::LLVMContext TheContext;
+  static llvm::IRBuilder<> Builder;
+  
+  static llvm::ConstantInt *c32(int n) {
+    return llvm::ConstantInt::get(TheContext, llvm::APInt(n, 32, true));
+  }
+
+  static llvm::ConstantInt *c8(char c) {
+    return llvm::ConstantInt::get(TheContext, llvm::APInt(c, 8, true));
+  }
+
 };
 
 inline std::ostream& operator<< (std::ostream &out, const AST &t) {
@@ -33,7 +76,7 @@ inline std::ostream& operator<< (std::ostream &out, const AST &t) {
 
 class Expr: public AST {
 public:
-  bool type_check(Type* t) {
+  bool type_check(TonyType* t) {
     sem();
     return check_type_equality(t, type);
   }
@@ -45,7 +88,7 @@ public:
     sem();
     return (t == type->get_current_type() && type->get_nested_type() == nullptr);
   }
-  Type* get_type() {
+  TonyType* get_type() {
     /* 
       We want to be able to access `type` from a pointer to an `Expr`.
       But `type` is protected, so we need this `public` method.
@@ -53,7 +96,7 @@ public:
     return type;
   }
 protected:
-  Type* type;
+  TonyType* type;
 };
 
 class Stmt: public AST {
@@ -65,18 +108,18 @@ public:
   virtual bool isLvalue() {return false;}
 };
 
-
 class Simple: public Stmt {  
 };
 
 class Id: public Atom {
 public:
   Id(std::string v): var(v) {}
-  void printOn(std::ostream &out) const override {
+  ~Id() {}
+  virtual void printOn(std::ostream &out) const override {
     out << "<Id name=\"" << var << "\"> ";
   }
 
-  void set_type(Type* t){
+  void set_type(TonyType* t){
     type = t;
   }
 
@@ -92,7 +135,7 @@ public:
     return var;
   }
 
-  void sem() override {
+  virtual void sem() override {
     SymbolEntry *e = st.lookup(var);
     if(e == nullptr) {
       yyerror("Variable \"%s\" not found!", var.c_str());
@@ -102,6 +145,10 @@ public:
     // std::cout << "I think i saw a variable: " << var << " with type " << type <<"!\n";
   }
 
+/*   virtual Value *compile() override {
+
+  } */
+
   virtual bool isLvalue() override{
     return true;
   }
@@ -109,22 +156,21 @@ private:
   std::string var;
 };
 
-
 class ArrayElement: public Atom {
 public:
   ArrayElement(Atom *a, Expr *e): atom(a), expr(e) {}
   ~ArrayElement() {delete atom; delete expr;}
-  void printOn(std::ostream &out) const override {
+  virtual void printOn(std::ostream &out) const override {
     out << "\n<ArrayElement>\n" << *atom << "\n" << *expr << "\n</ArrayElement>\n";
   }
-  void sem() override {
-  atom->sem();
-  if(atom->get_type()->get_current_type()!=TYPE_array){
-    yyerror("Accessing array value of non-array object.");
-  }
-  expr->sem();
-  if(expr->get_type()->get_current_type() != TYPE_int){
-    yyerror("Expected %s to be of type integer");
+  virtual void sem() override {
+    atom->sem();
+    if(atom->get_type()->get_current_type()!=TYPE_array){
+      yyerror("Accessing array value of non-array object.");
+    }
+    expr->sem();
+    if(expr->get_type()->get_current_type() != TYPE_int){
+      yyerror("Expected expression to be of type integer, as an index to an array");
   }
 
   type = atom->get_type()->get_nested_type();
@@ -138,16 +184,16 @@ private:
   Expr *expr;
 };
 
-
 class StringLiteral: public Atom {
 public:
   StringLiteral(std::string str): strlit(str) {}
-  void printOn(std::ostream &out) const override {
+  ~StringLiteral () {}
+  virtual void printOn(std::ostream &out) const override {
     out << "<String value=\"" << strlit << "\"> ";
   }
 
   virtual void sem() override {
-    type = new Type(TYPE_array, new Type(TYPE_char, nullptr));
+    type = new TonyType(TYPE_array, new TonyType(TYPE_char, nullptr));
   }
 
   virtual bool isLvalue() override {
@@ -157,55 +203,57 @@ private:
   std::string strlit;
 };
 
-
 class CharConst: public Expr {
 public:
   CharConst(unsigned char c): char_const(c) {}
-  void printOn(std::ostream &out) const override {
+  ~CharConst() {}
+  virtual void printOn(std::ostream &out) const override {
     out << "<CharConst value='"<< char_const << "\' ascii="<< (int) char_const << "> ";
   }
-  void sem() override {
-    type = new Type(TYPE_char, nullptr);
+  virtual void sem() override {
+    type = new TonyType(TYPE_char, nullptr);
   }
 private:
   unsigned char char_const;
 };
 
-
 class IntConst: public Expr {
 public:
   IntConst(int n): num(n) {}
-  void printOn(std::ostream &out) const override {
+  ~IntConst() {}
+  virtual void printOn(std::ostream &out) const override {
     out << "<IntConst value=" << num << "> ";
   }
-  void sem() override {
-    type = new Type(TYPE_int, nullptr);
+  virtual void sem() override {
+    type = new TonyType(TYPE_int, nullptr);
   }
+
+ /*  virtual Value *compile () override {
+    return c32(num);
+  } */
 private:
   int num;
 };
 
-
 class New: public Expr {
 public:
-  New(Type *t, Expr *right): type_of_elems(t), expr(right) {}
+  New(TonyType *t, Expr *right): type_of_elems(t), expr(right) {}
   ~New() {delete type_of_elems; delete expr;}
-  void printOn(std::ostream &out) const override {
+  virtual void printOn(std::ostream &out) const override {
     out << "<New> " << type_of_elems << *expr << "</New> ";
   }
 
-  void sem() override {
+  virtual void sem() override {
     expr->sem();
     if(expr->get_type()->get_current_type() != TYPE_int){
-      yyerror("Array index not an integer");
+      yyerror("Array index not an integer.");
     }
-    type = new Type(TYPE_array, type_of_elems);
+    type = new TonyType(TYPE_array, type_of_elems);
   }
 private:
-  Type *type_of_elems;
+  TonyType *type_of_elems;
   Expr *expr;
 };
-
 
 /*
  *  This is a constant value (check Tony language description).
@@ -214,71 +262,71 @@ private:
 class Nil: public Expr {
 public:
   Nil() {}
-  void printOn(std::ostream &out) const override {
+  ~Nil() {}
+  virtual void printOn(std::ostream &out) const override {
     out << "<Nil> ";
   }
-  void sem() override {
-    type = new Type(TYPE_list, new Type(TYPE_any, nullptr));
+  virtual void sem() override {
+    type = new TonyType(TYPE_list, new TonyType(TYPE_any, nullptr));
   }
 };
-
 
 class Boolean: public Expr {
 public:
   Boolean(std::string b): boolean_value(b) {}
-  void printOn(std::ostream &out) const override {
+  ~Boolean() {}
+  virtual void printOn(std::ostream &out) const override {
     out << "<Boolean value=" << boolean_value << "> ";
   }
-  void sem() override {
-    type = new Type(TYPE_bool, nullptr);
+  virtual void sem() override {
+    type = new TonyType(TYPE_bool, nullptr);
   }
 private:
   std::string boolean_value;
 };
 
-
 class BinOp: public Expr {
 public:
   BinOp(Expr *l, std::string o, Expr *r): left(l), op(o), right(r) {}
   ~BinOp() { delete left; delete right; }
-  void printOn(std::ostream &out) const override {
+  virtual void printOn(std::ostream &out) const override {
     out << "\n<Binop op=\"" << op << "\">\n" << *left << *right << "\n</BinOp>\n";
   }
   void sem() override {
     if (op == "+" || op == "-" || op == "*" || op == "/" || op == "mod") {
       if (!left->type_check(TYPE_int) || !right->type_check(TYPE_int)) {
         // TODO: We must be more specific in our errors. This is temporary.
-        yyerror("Type mismatch. Both expressions must be of type 'int'.\n");
+        yyerror("TonyType mismatch. Both expressions must be of type 'int'.\n");
       }
-      type = new Type(TYPE_int, nullptr);
+      type = new TonyType(TYPE_int, nullptr);
     } else if (op == "=" || op == "<>" || op == "<" || op == ">" || op == "<=" || op == ">=") {
       left->sem();
       right->sem();
       if (!check_type_equality(left->get_type(), right->get_type())) {
-        yyerror("Type mismatch. Expressions must have the same type.\n");
+        yyerror("TonyType mismatch. Expressions must have the same type.\n");
       }
-      type = new Type(TYPE_bool, nullptr);
+      type = new TonyType(TYPE_bool, nullptr);
     } else if (op == "and" || op == "or") {
       if (!left->type_check(TYPE_bool) || !right->type_check(TYPE_bool)) {
-        yyerror("Type mismatch. Both expressions must be of type 'bool'.\n");
+        yyerror("TonyType mismatch. Both expressions must be of type 'bool'.\n");
       }
-      type = new Type(TYPE_bool, nullptr);
+      type = new TonyType(TYPE_bool, nullptr);
     } else if (op == "#") {
       left->sem();
       right->sem();
 
       if (right->get_type()->get_current_type() != TYPE_list) {
-        yyerror("Type mismatch. Expression on the right of '#' operator \
+        yyerror("TonyType mismatch. Expression on the right of '#' operator \
                 must be a list.\n");
       }
 
       if (right->get_type()->get_nested_type() != nullptr && 
           !check_type_equality(left->get_type(), right->get_type()->get_nested_type())) {
-        yyerror("Type mismatch. Expression on the left of '#' operator \
+        yyerror("TonyType mismatch. Expression on the left of '#' operator \
                 must be have the same type as the elements of the list on the right \
                 of the operator.\n");
       }
-      type = new Type(TYPE_list, left->get_type());
+      type = new TonyType(TYPE_list, left->get_type());
     } else {
       yyerror("Wrong binary operator.\n");
     }
@@ -289,36 +337,35 @@ private:
   Expr *right;
 };
 
-
 class UnOp: public Expr {
 public:
   UnOp(std::string(o), Expr *r): op(o), right(r) {}
   ~UnOp() { delete right; }
-  void printOn(std::ostream &out) const override {
+  virtual void printOn(std::ostream &out) const override {
     out << "\n<UnOp op=\"" << op << "\">\n" << *right << "\n</UnOp>\n";
   }
-  void sem() override {
+  virtual void sem() override {
     if (op == "+" || op == "-") {
       if (!right->type_check(TYPE_int)) {
-        yyerror("Type mismatch. Expression must be of type 'int'.");
+        yyerror("TonyType mismatch. Expression must be of type 'int'.");
       }
-      type = new Type(TYPE_int, nullptr);
+      type = new TonyType(TYPE_int, nullptr);
     } else if (op == "not") { 
       if (!right->type_check(TYPE_bool)) {
-        yyerror("Type mismatch. Expression must be of type 'bool'.");
+        yyerror("TonyType mismatch. Expression must be of type 'bool'.");
       }
-      type = new Type(TYPE_bool, nullptr);
+      type = new TonyType(TYPE_bool, nullptr);
     } else if (op == "head") {
       // Compute the type of the expression.
       right->sem();
-      Type *operand_type = right->get_type();
+      TonyType *operand_type = right->get_type();
       // Check that the expression is a list.
       if (operand_type->get_current_type() != TYPE_list) {
-        yyerror("Type mismatch. Expression after 'head' must be a list.");
+        yyerror("TonyType mismatch. Expression after 'head' must be a list.");
       }
       // Check that the expression is not the 'nil' constant (empty list).
       if (is_nil_constant(operand_type)) {
-        yyerror("Type mismatch. Expression after 'head' cannot be a 'nil' list.");
+        yyerror("TonyType mismatch. Expression after 'head' cannot be a 'nil' list.");
       }
       // The nested type of the expression is actually the type of the list's elements.
       // NOTE: Maybe we should create a new type here, that is a copy of: 
@@ -328,25 +375,25 @@ public:
     } else if (op == "tail") {
       // Compute the type of the expression.
       right->sem();
-      Type *operand_type = right->get_type();
+      TonyType *operand_type = right->get_type();
       // Check that the expression is a list.
       if (operand_type->get_current_type() != TYPE_list) {
-        yyerror("Type mismatch. Expression after 'tail' must be a list.");
+        yyerror("TonyType mismatch. Expression after 'tail' must be a list.");
       }
       // Check that the expression is not the 'nil' constant (empty list).
       if (is_nil_constant(operand_type)) {
-        yyerror("Type mismatch. Expression after 'tail' cannot be a 'nil' list.");
+        yyerror("TonyType mismatch. Expression after 'tail' cannot be a 'nil' list.");
       }
       // The type of the expression is the type of the tail.
       type = operand_type; 
     } else if (op == "nil?") {
       // Compute the type of the expression.
       right->sem();
-      Type *operand_type = right->get_type();
+      TonyType *operand_type = right->get_type();
       if(operand_type->get_current_type() != TYPE_list) {
-        yyerror("Type mismatch. Expression after 'nil?' must be a list.");
+        yyerror("TonyType mismatch. Expression after 'nil?' must be a list.");
       }
-      type = new Type(TYPE_bool, nullptr); 
+      type = new TonyType(TYPE_bool, nullptr); 
     }
   }
 private:
@@ -373,11 +420,11 @@ public:
    This is a method that is called in `parser.y` to set the type of the
    `VarList`, after the `ids` vector is filled with all the variables.
    */
-  void set_type(Type* t) {
+  void set_type(TonyType* t) {
     type = t;
   }
 
-  void printOn(std::ostream &out) const override {
+  virtual void printOn(std::ostream &out) const override {
     out << "\n<VarList>\n";
     out << type;
     for (Id * i : ids) {
@@ -386,12 +433,12 @@ public:
     out << "\n</VarList>\n";
   }
   
-  void sem() override {
+  virtual void sem() override {
     for (Id * i : ids) {i->set_type(type); i->insertIntoScope();}
   }
 
-  std::pair<Type*, int> getArgs(){
-    std::pair<Type*, int> p1;
+  std::pair<TonyType*, int> getArgs(){
+    std::pair<TonyType*, int> p1;
     p1.first = type;
     p1.second = (int) ids.size();
     return p1;
@@ -399,31 +446,29 @@ public:
 
 protected:
   std::vector<Id *> ids;
-  Type* type;
+  TonyType* type;
 };
-
 
 class Formal: public AST {
 public:
   Formal(VarList* v, bool i): var_list(v), is_ref(i) {}
   ~Formal() {delete var_list;}
-  void printOn(std::ostream &out) const override {
+  virtual void printOn(std::ostream &out) const override {
     out << "\n<Formal isRef=\"" << (is_ref ? "yes" : "no") << "\">\n" << *var_list << "</Formal>";
   }
   
-  void sem() override {
+  virtual void sem() override {
     var_list->sem();
   }
 
   //TODO: Handle refs
-  std::pair<Type*, int> getArgs() {
+  std::pair<TonyType*, int> getArgs() {
     return var_list->getArgs();
   }
 private:
   VarList* var_list;
   bool is_ref;
 };
-
 
 class FormalList: public AST {
 public:
@@ -440,7 +485,7 @@ public:
     std::reverse(formals.begin(), formals.end());
   }
 
-  void printOn(std::ostream &out) const override {
+  virtual void printOn(std::ostream &out) const override {
     out << "\n<FormalList>\n";
 
     for (Formal * f : formals) {
@@ -454,10 +499,10 @@ public:
   }
 
   //This is fine, don't need pointers
-  std::vector<Type *> getArgs(){
-    std::vector<Type *> ret;
+  std::vector<TonyType *> getArgs(){
+    std::vector<TonyType *> ret;
     for (Formal *f: formals){
-      std::pair<Type*, int> p1 = f->getArgs(); 
+      std::pair<TonyType*, int> p1 = f->getArgs(); 
       for (int i=0; i < p1.second; i++){
         ret.push_back(p1.first);
       }
@@ -469,13 +514,13 @@ private:
   std::vector<Formal *> formals;
 };
 
-
 class Header: public AST {
 public:
-  Header(Type *t, Id *name, FormalList *f): type(t), formals(f), id(name), isTyped(true) {}
-  Header(Id *name, FormalList *f): formals(f), id(name), isTyped(false) {type = new Type(TYPE_void, nullptr);}
+  Header(TonyType *t, Id *name, FormalList *f): type(t), formals(f), id(name), isTyped(true) {}
+  Header(Id *name, FormalList *f): formals(f), id(name), isTyped(false) {type = new TonyType(TYPE_void, nullptr);}
   ~Header(){ delete formals; delete id;}
-  void printOn(std::ostream &out) const override {
+  virtual void sem() override {}
+  virtual void printOn(std::ostream &out) const override {
     out << "<Header>\n"; 
     if(!isTyped) {
       out << "<NoType>";
@@ -491,7 +536,7 @@ public:
     out << "\n</Header>\n";
   }
 
-  Type *getType() {return type;}
+  TonyType *getType() {return type;}
 
   // To handle declarations and definitions
   // The way it is structured, the function adds its own header to above function's scope
@@ -504,15 +549,15 @@ public:
     //if (formals) formals->sem();
 
     // Get arguments if any
-    std::vector<Type *> args;
+    std::vector<TonyType *> args;
     if (formals){
       args = formals->getArgs();
     }
-    Type *fun;
+    TonyType *fun;
     if (!isTyped){
-      fun = new Type(TYPE_function, nullptr, new Type(TYPE_void, nullptr), args, true);
+      fun = new TonyType(TYPE_function, nullptr, new TonyType(TYPE_void, nullptr), args, true);
     }else{
-      fun = new Type(TYPE_function, nullptr, type, args, true); 
+      fun = new TonyType(TYPE_function, nullptr, type, args, true); 
     }
     id->set_type(fun);
     id->insertIntoScope();  
@@ -523,15 +568,15 @@ public:
     // Get arguments if any
     if (formals) formals->sem();
 
-    std::vector<Type *> args;
+    std::vector<TonyType *> args;
     if (formals){
       args = formals->getArgs();
     }
-    Type *fun;
+    TonyType *fun;
     if (!isTyped){
-      fun = new Type(TYPE_function, nullptr, new Type(TYPE_void, nullptr), args, true);
+      fun = new TonyType(TYPE_function, nullptr, new TonyType(TYPE_void, nullptr), args, true);
     }else{
-      fun = new Type(TYPE_function, nullptr, type, args, true); 
+      fun = new TonyType(TYPE_function, nullptr, type, args, true); 
     }
     id->set_type(fun);
     
@@ -539,16 +584,16 @@ public:
     SymbolEntry *e = st.lookupParentScope(id->getName());
     if(e != nullptr) {
       //Function either declared or defined
-      Type *t = e->type;
+      TonyType *t = e->type;
       if(t->get_current_type()!= TYPE_function){
-        yyerror("Expected function type");
+        yyerror("Expected type function.");
       }
 
       if(!t->isDeclared()){
         //this means function is redefined
       }
 
-      //TODO: Type check if the vars in declaration match the definition
+      //TODO: TonyType check if the vars in declaration match the definition
       t->toggleDeclDef();
       if(!check_type_equality(t, fun)){
         yyerror("Function definition different from declaration");
@@ -568,7 +613,7 @@ public:
   }
 
 private:
-  Type *type;
+  TonyType *type;
   FormalList *formals;
   Id *id;
   bool isTyped;
@@ -578,7 +623,7 @@ class Return: public Stmt{
 public:
   Return(Expr* e): ret_expr(e) {}
   ~Return() {delete ret_expr;}
-  void printOn(std::ostream &out) const override {
+  virtual void printOn(std::ostream &out) const override {
     out << "\n<Return>\n" << *ret_expr << "\n</Return>\n";
   }
 
@@ -593,22 +638,20 @@ private:
   Expr* ret_expr;
 };
 
-
 class Exit: public Stmt{
 public:
   Exit() {}
-  void printOn(std::ostream &out) const override {
+  virtual void printOn(std::ostream &out) const override {
     out << "\n<Exit>\n";
   }
 
   virtual void sem() override{
-    Type *t = st.getCurrentScopeReturnType();
+    TonyType *t = st.getCurrentScopeReturnType();
     if(t->get_current_type() != TYPE_void){
         yyerror("Exit from a typed function.");
     }
   }
 };
-
 
 class StmtBody: public AST {
 public:
@@ -622,14 +665,14 @@ public:
     std::reverse(stmts.begin(), stmts.end());
   }
 
-  void printOn(std::ostream &out) const override {
+  virtual void printOn(std::ostream &out) const override {
     out << "\n<StmtBody>\n";
     for (Stmt *s : stmts) {
       out << *s;
     }
     out << "\n</StmtBody>\n";
   }
-  void sem() override {
+  virtual void sem() override {
     for (Stmt *s : stmts) {
       s->sem();
     }
@@ -639,15 +682,14 @@ private:
   std::vector<Stmt*> stmts;
 };
 
-
 class Assign: public Simple {
 public:
   Assign(Atom *a, Expr *e): atom(a), expr(e) {}
   ~Assign() {delete atom; delete expr;}
-  void printOn(std::ostream &out) const override {
+  virtual void printOn(std::ostream &out) const override {
     out << "\n<Assign>\n" << *atom << *expr << "\n</Assign>\n";
   }
-  void sem() override {
+  virtual void sem() override {
     atom->sem();
     if (!expr->type_check(atom->get_type())) {
       yyerror("Atom on the left and expression on the right should have the same type during assignment.");
@@ -661,18 +703,17 @@ private:
   Expr *expr;
 };
 
-
 class Skip: public Simple {
 public:
   Skip() {}
+  ~Skip() {}
   
-  void printOn(std::ostream &out) const override {
+  virtual void printOn(std::ostream &out) const override {
     out << "\n<Skip>\n";
   }
 
   void sem() override {}
 };
-
 
 class Elsif: public Stmt {
 public:
@@ -701,16 +742,16 @@ public:
     elsif_stmt_bodies.push_back(s);
   }
 
-    void printOn(std::ostream &out) const override {
+    virtual void printOn(std::ostream &out) const override {
     // This is never used
     out << "<Elsif> </Elsif>";
   }
+  virtual void sem() override {}
 
 private:
   std::vector<Expr *> elsif_conds;
   std::vector<StmtBody *> elsif_stmt_bodies;
 };
-
 
 class Else: public Stmt {
 public:
@@ -734,16 +775,17 @@ public:
   }
 
   // This is never used, only for testing
-  void printOn(std::ostream &out) const override {
+  virtual void printOn(std::ostream &out) const override {
     if(!else_stmt.empty()){
       out << "\n<Else>\n" << *else_stmt[0] << "\n</Else>\n";
     }
   }
 
+  virtual void sem() override {}
+
 private:
   std::vector<StmtBody *> else_stmt;
 };
-
 
 class If: public Stmt {
 public:
@@ -770,7 +812,7 @@ public:
     for (StmtBody* s: statements) delete s; 
   }
 
-  void printOn(std::ostream &out) const override {
+  virtual void printOn(std::ostream &out) const override {
     out << "\n<If>\n";
     out << *conditions[0] << *statements[0];
 
@@ -789,11 +831,11 @@ public:
     out << "\n</If>\n";
   }
 
-  void sem() override {
-    // Type-check all conditions and call `sem()` for all statements.
+  virtual void sem() override {
+    // TonyType-check all conditions and call `sem()` for all statements.
     for(int i=0; i<(int) conditions.size(); i++) {
       if(!conditions[i]->type_check(TYPE_bool)) {
-        yyerror("Type mismatch. 'If-condition' is not boolean.");
+        yyerror("TonyType mismatch. 'If-condition' is not boolean.");
       }
       statements[i]->sem();
     }
@@ -804,7 +846,6 @@ private:
   std::vector<StmtBody *> statements;
   bool hasElse = false;
 };
-
 
 class SimpleList: public AST {
 public:
@@ -817,7 +858,7 @@ public:
     std::reverse(simples.begin(), simples.end());
   }
 
-  void printOn(std::ostream &out) const override {
+  virtual void printOn(std::ostream &out) const override {
     out << "\n<SimplesList>\n";
     for (Simple *s : simples) {
       out << *s;
@@ -828,7 +869,7 @@ public:
     return simples;
   }
 
-  void sem() override {
+  virtual void sem() override {
     for (Simple *s : simples) {
       s->sem();
     }
@@ -836,7 +877,6 @@ public:
 private:
   std::vector<Simple *> simples;
 };
-
 
 class For: public Stmt {
 public:
@@ -849,11 +889,11 @@ public:
     delete stmt_body;
   }
 
-  void printOn(std::ostream &out) const override {
+  virtual void printOn(std::ostream &out) const override {
     out << "\n<For>\n" << *simple_list_1 << *expr << *simple_list_2  << *stmt_body << "\n</For>\n";
   }
 
-  void sem() override {
+  virtual void sem() override {
     simple_list_1->sem();
     expr->sem();
     if(expr->get_type()->get_current_type() != TYPE_bool){
@@ -870,7 +910,6 @@ private:
   StmtBody *stmt_body;
 };
 
-
 class ExprList: public AST {
 public:
   ExprList(): expressions() {}
@@ -882,7 +921,7 @@ public:
     std::reverse(expressions.begin(), expressions.end());
   }
 
-  void printOn(std::ostream &out) const override {
+  virtual void printOn(std::ostream &out) const override {
     out << "\n<ExprList>\n";
     for (Expr *e : expressions) {
       out << *e;
@@ -901,13 +940,12 @@ private:
   std::vector<Expr*> expressions;
 };
 
-
 class FunctionCall: public Simple, public Atom {
 public:
   FunctionCall(Id *n): name(n), hasParams(false) {}
   FunctionCall(Id *n, ExprList *el): name(n), params(el), hasParams(true) {}
   ~FunctionCall() {delete name; if (hasParams) delete params;}
-  void printOn(std::ostream &out) const override {
+  virtual void printOn(std::ostream &out) const override {
     if(!hasParams)
       out << "\n<FunctionCall>\n" << *name << "\n</FunctionCall>\n";
     else
@@ -919,7 +957,7 @@ public:
 
     if (name->get_type()->get_current_type() != TYPE_function)
       yyerror("Function call, expected a function");
-    std::vector<Type *> args = name->get_type()->get_function_args();
+    std::vector<TonyType *> args = name->get_type()->get_function_args();
     std::vector<Expr*> expressions;
     if (hasParams){
       expressions = params->get_expr_list();
@@ -948,12 +986,11 @@ private:
   bool hasParams;
 };
 
-
 class FunctionDeclaration: public AST {
 public:
   FunctionDeclaration(Header *hd): header(hd){}
   ~FunctionDeclaration() {delete header;}
-  void printOn(std::ostream &out) const override {
+  virtual void printOn(std::ostream &out) const override {
     out << "\n<FunctionDeclaration>\n" << *header << "\n</FunctionDeclaration>\n" ;
   }
 
@@ -975,78 +1012,78 @@ public:
 
   void initFunctions(){
     //puti
-    std::vector<Type*> v {new Type(TYPE_int, nullptr)};
-    st.insert(std::string("puti"), new Type(TYPE_function, nullptr,new Type(TYPE_void, nullptr), v, true));
+    std::vector<TonyType*> v {new TonyType(TYPE_int, nullptr)};
+    st.insert(std::string("puti"), new TonyType(TYPE_function, nullptr,new TonyType(TYPE_void, nullptr), v, true));
     //putc
     v.clear();
-    v.push_back(new Type(TYPE_char, nullptr));
-    st.insert(std::string("putc"), new Type(TYPE_function, nullptr,new Type(TYPE_void, nullptr), v, true));
+    v.push_back(new TonyType(TYPE_char, nullptr));
+    st.insert(std::string("putc"), new TonyType(TYPE_function, nullptr,new TonyType(TYPE_void, nullptr), v, true));
 
     //putb
     v.clear();
-    v.push_back(new Type(TYPE_bool, nullptr));
-    st.insert(std::string("putb"), new Type(TYPE_function, nullptr,new Type(TYPE_void, nullptr), v, true));
+    v.push_back(new TonyType(TYPE_bool, nullptr));
+    st.insert(std::string("putb"), new TonyType(TYPE_function, nullptr,new TonyType(TYPE_void, nullptr), v, true));
     
     //puts
     v.clear();
-    v.push_back(new Type(TYPE_array, new Type(TYPE_char, nullptr)));
-    st.insert(std::string("puts"), new Type(TYPE_function, nullptr,new Type(TYPE_void, nullptr), v, true));
+    v.push_back(new TonyType(TYPE_array, new TonyType(TYPE_char, nullptr)));
+    st.insert(std::string("puts"), new TonyType(TYPE_function, nullptr,new TonyType(TYPE_void, nullptr), v, true));
 
     //geti
     v.clear();
-    st.insert(std::string("geti"), new Type(TYPE_function, nullptr, new Type(TYPE_int, nullptr), v, true));
+    st.insert(std::string("geti"), new TonyType(TYPE_function, nullptr, new TonyType(TYPE_int, nullptr), v, true));
 
     //getb
     v.clear();
-    st.insert(std::string("getb"), new Type(TYPE_function, nullptr, new Type(TYPE_bool, nullptr), v, true));
+    st.insert(std::string("getb"), new TonyType(TYPE_function, nullptr, new TonyType(TYPE_bool, nullptr), v, true));
 
     //getc
     v.clear();
-    st.insert(std::string("getc"), new Type(TYPE_function, nullptr, new Type(TYPE_char, nullptr), v, true));
+    st.insert(std::string("getc"), new TonyType(TYPE_function, nullptr, new TonyType(TYPE_char, nullptr), v, true));
 
     //gets
     v.clear();
-    v.push_back(new Type(TYPE_int, nullptr));
-    v.push_back(new Type(TYPE_array, new Type(TYPE_char, nullptr)));
-    st.insert(std::string("gets"), new Type(TYPE_function, nullptr, new Type(TYPE_void, nullptr), v, true));
+    v.push_back(new TonyType(TYPE_int, nullptr));
+    v.push_back(new TonyType(TYPE_array, new TonyType(TYPE_char, nullptr)));
+    st.insert(std::string("gets"), new TonyType(TYPE_function, nullptr, new TonyType(TYPE_void, nullptr), v, true));
 
     //abs
     v.clear();
-    v.push_back(new Type(TYPE_int, nullptr));
-    st.insert(std::string("abs"), new Type(TYPE_function, nullptr, new Type(TYPE_int, nullptr), v, true));
+    v.push_back(new TonyType(TYPE_int, nullptr));
+    st.insert(std::string("abs"), new TonyType(TYPE_function, nullptr, new TonyType(TYPE_int, nullptr), v, true));
 
     //ord
     v.clear();
-    v.push_back(new Type(TYPE_char, nullptr));
-    st.insert(std::string("ord"), new Type(TYPE_function, nullptr, new Type(TYPE_int, nullptr), v, true));
+    v.push_back(new TonyType(TYPE_char, nullptr));
+    st.insert(std::string("ord"), new TonyType(TYPE_function, nullptr, new TonyType(TYPE_int, nullptr), v, true));
 
     //chr
     v.clear();
-    v.push_back(new Type(TYPE_int, nullptr));
-    st.insert(std::string("chr"), new Type(TYPE_function, nullptr, new Type(TYPE_char, nullptr), v, true));
+    v.push_back(new TonyType(TYPE_int, nullptr));
+    st.insert(std::string("chr"), new TonyType(TYPE_function, nullptr, new TonyType(TYPE_char, nullptr), v, true));
 
     //strlen
     v.clear();
-    v.push_back(new Type(TYPE_array, new Type(TYPE_char, nullptr)));
-    st.insert(std::string("strlen"), new Type(TYPE_function, nullptr, new Type(TYPE_int, nullptr), v, true));
+    v.push_back(new TonyType(TYPE_array, new TonyType(TYPE_char, nullptr)));
+    st.insert(std::string("strlen"), new TonyType(TYPE_function, nullptr, new TonyType(TYPE_int, nullptr), v, true));
 
     //strcmp
     v.clear();
-    v.push_back(new Type(TYPE_array, new Type(TYPE_char, nullptr)));
-    v.push_back(new Type(TYPE_array, new Type(TYPE_char, nullptr)));
-    st.insert(std::string("strcmp"), new Type(TYPE_function, nullptr, new Type(TYPE_int, nullptr), v, true));
+    v.push_back(new TonyType(TYPE_array, new TonyType(TYPE_char, nullptr)));
+    v.push_back(new TonyType(TYPE_array, new TonyType(TYPE_char, nullptr)));
+    st.insert(std::string("strcmp"), new TonyType(TYPE_function, nullptr, new TonyType(TYPE_int, nullptr), v, true));
 
     //strcpy
     v.clear();
-    v.push_back(new Type(TYPE_array, new Type(TYPE_char, nullptr)));
-    v.push_back(new Type(TYPE_array, new Type(TYPE_char, nullptr)));
-    st.insert(std::string("strcpy"), new Type(TYPE_function, nullptr, new Type(TYPE_void, nullptr), v, true));
+    v.push_back(new TonyType(TYPE_array, new TonyType(TYPE_char, nullptr)));
+    v.push_back(new TonyType(TYPE_array, new TonyType(TYPE_char, nullptr)));
+    st.insert(std::string("strcpy"), new TonyType(TYPE_function, nullptr, new TonyType(TYPE_void, nullptr), v, true));
 
     //strcat
     v.clear();
-    v.push_back(new Type(TYPE_array, new Type(TYPE_char, nullptr)));
-    v.push_back(new Type(TYPE_array, new Type(TYPE_char, nullptr)));
-    st.insert(std::string("strcat"), new Type(TYPE_function, nullptr, new Type(TYPE_void, nullptr), v, true));
+    v.push_back(new TonyType(TYPE_array, new TonyType(TYPE_char, nullptr)));
+    v.push_back(new TonyType(TYPE_array, new TonyType(TYPE_char, nullptr)));
+    st.insert(std::string("strcat"), new TonyType(TYPE_function, nullptr, new TonyType(TYPE_void, nullptr), v, true));
 
   }
 
@@ -1064,7 +1101,7 @@ public:
     std::reverse(local_definitions.begin(), local_definitions.end());
   }
 
-  void printOn(std::ostream &out) const override {
+  virtual void printOn(std::ostream &out) const override {
     out << "\n<FunctionDefinition>\n" << *header; 
     
     for (AST *a : local_definitions) out << *a;
@@ -1094,6 +1131,5 @@ private:
   StmtBody *body;
   std::vector<AST *> local_definitions;
 };
-
 
 #endif

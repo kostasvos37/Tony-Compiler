@@ -8,25 +8,25 @@
 enum TypeBlock {TYPE_int, TYPE_bool, TYPE_char, TYPE_array, TYPE_list, TYPE_function, TYPE_void, TYPE_any};
 void yyerror(const char *msg, ...);
 
-class Type {
+class TonyType {
 public:
-    Type(TypeBlock current, Type *nested): current_type(current), nested_type(nested) {}
-    Type(TypeBlock current, Type *nested, Type *ret, std::vector<Type *> args, bool dec): 
+    TonyType(TypeBlock current, TonyType *nested): current_type(current), nested_type(nested) {}
+    TonyType(TypeBlock current, TonyType *nested, TonyType *ret, std::vector<TonyType *> args, bool dec): 
     current_type(current), nested_type(nested), returnType(ret), function_args(args), declDef(dec){    }
-    ~Type() {delete nested_type;};
+    ~TonyType() {delete nested_type;};
     TypeBlock get_current_type() {
         return current_type;
     }
-    Type* get_nested_type() {
+    TonyType* get_nested_type() {
         return nested_type;
     }
 
-    Type *get_return_type() {
+    TonyType *get_return_type() {
         if (current_type != TYPE_function) yyerror("No return type for a non function type.");
         return returnType;
     }
 
-    std::vector<Type *> get_function_args (){
+    std::vector<TonyType *> get_function_args (){
       return function_args;
     }
     bool isDeclared() {
@@ -38,18 +38,18 @@ public:
 
 protected:
     TypeBlock current_type;
-    Type* nested_type;
+    TonyType* nested_type;
     
     //For functions only
-    Type *returnType;
-    std::vector<Type *> function_args;
+    TonyType *returnType;
+    std::vector<TonyType *> function_args;
     bool declDef;
 };
 
-bool check_type_equality(Type* type1, Type* type2);
+bool check_type_equality(TonyType* type1, TonyType* type2);
 
-inline std::ostream& operator<< (std::ostream &out, Type* t) {
-  Type* curr = t;
+inline std::ostream& operator<< (std::ostream &out, TonyType* t) {
+  TonyType* curr = t;
   while (curr != nullptr) {
     switch (curr->get_current_type())
     {

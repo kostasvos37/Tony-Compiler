@@ -11,26 +11,26 @@
 void yyerror(const char *msg, ...);
 
 struct SymbolEntry {
-    Type* type;
+    TonyType* type;
     SymbolEntry() {}
-    SymbolEntry(Type* t) : type(t) {};
+    SymbolEntry(TonyType* t) : type(t) {};
 };
 
 class Scope {
 public:
-    Scope(Type *t) : locals(), size(0), returnType(t), hasReturn(false) {}
+    Scope(TonyType *t) : locals(), size(0), returnType(t), hasReturn(false) {}
     SymbolEntry *lookup(std::string c) {
         if (locals.find(c) == locals.end()) {return nullptr;}
         return &locals[c];
     }
         
-    void insert(std::string c, Type* t){
+    void insert(std::string c, TonyType* t){
         if (locals.find(c) != locals.end()) yyerror("Variable already declared");
         locals[c] = SymbolEntry(t);
         ++size;
     }
     int getSize() const { return size; }
-    Type *getReturnType() { return returnType;}
+    TonyType *getReturnType() { return returnType;}
 
     //For testing
     void printScope(int ident) { 
@@ -47,7 +47,7 @@ public:
 private:
     std::map<std::string, SymbolEntry> locals;
     int size;
-    Type *returnType;
+    TonyType *returnType;
     bool hasReturn;
 };
 
@@ -67,7 +67,7 @@ public:
         return nullptr;
     }
 
-    void insert(std::string c, Type* t){
+    void insert(std::string c, TonyType* t){
         scopes.back().insert(c, t);
     }
     // This probably doesn't belong here, but works for now
@@ -75,7 +75,7 @@ public:
     bool hasParentScope(){
         return scopes.size() > 1;
     }
-    void insertIntoParentScope(std::string c, Type* t){
+    void insertIntoParentScope(std::string c, TonyType* t){
         scopes.at(scopes.size() -2).insert(c, t);
     }
     SymbolEntry * lookupParentScope(std::string c){
@@ -85,7 +85,7 @@ public:
         }
         return nullptr;
     }
-    void openScope(Type *t){
+    void openScope(TonyType *t){
         scopes.push_back(Scope(t));
     }
     void closeScope(){
@@ -95,7 +95,7 @@ public:
         return scopes.back().getSize();
     }
 
-    Type *getCurrentScopeReturnType (){
+    TonyType *getCurrentScopeReturnType (){
         return scopes.back().getReturnType();
     }
 
