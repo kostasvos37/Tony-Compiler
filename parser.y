@@ -108,10 +108,9 @@ SymbolTable st;
 Program:
     Func_def {
         $1->sem();
-        $1->llvm_compile_and_dump();
-        $1->compile();
-        delete $1;
         std::cout << "Semantic analysis done!\n";
+        $1->llvm_compile_and_dump();
+        delete $1;
         //std::cout << *$1;
     }
 ;

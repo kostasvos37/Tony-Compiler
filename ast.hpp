@@ -71,6 +71,13 @@ public:
     //Emit Program Code
     compile();
     Builder.CreateRet(c32(0));
+    bool bad = llvm::verifyModule(*TheModule, &llvm::errs());
+    if (bad){
+      std::cerr << "The IR is bad!\n";
+      TheModule->print(llvm::errs(), nullptr);
+      std::exit(1);
+    }
+    TheModule->print(llvm::outs(), nullptr);
   } 
   
   virtual llvm::Value *compile() = 0;
@@ -87,20 +94,14 @@ protected:
   static llvm::Type *i64;
   
 
-  static llvm::ConstantInt *c64(int n) {
-    return llvm::ConstantInt::get(TheContext, llvm::APInt(n, 64, true));
+  static llvm::ConstantInt* c8(char c) {
+    return llvm::ConstantInt::get(TheContext, llvm::APInt(8, c, true));
   }
-
-  static llvm::ConstantInt *c32(int n) {
-    return llvm::ConstantInt::get(TheContext, llvm::APInt(n, 32, true));
+  static llvm::ConstantInt* c32(int n) {
+    return llvm::ConstantInt::get(TheContext, llvm::APInt(32, n, true));
   }
-
-  static llvm::ConstantInt *c8(char c) {
-    return llvm::ConstantInt::get(TheContext, llvm::APInt(c, 8, true));
-  }
-
-  static llvm::ConstantInt *c1(bool b) {
-    return llvm::ConstantInt::get(TheContext, llvm::APInt(b, 1, true));
+  static llvm::ConstantInt* c64(int n) {
+    return llvm::ConstantInt::get(TheContext, llvm::APInt(64, n, true));
   }
 };
 
