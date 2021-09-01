@@ -1,5 +1,4 @@
 def main():
-    int [] n
-    int y
-    y := n[8]
+    int x
+    x := 5
 end

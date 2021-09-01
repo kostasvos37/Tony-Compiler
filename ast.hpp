@@ -23,6 +23,15 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Verifier.h"
 
+#include <llvm/IR/LegacyPassManager.h>
+#include <llvm/IR/Value.h>
+#include <llvm/Transforms/InstCombine/InstCombine.h>
+#include <llvm/Transforms/Scalar.h>
+#include <llvm/Transforms/Scalar/GVN.h>
+#include <llvm/Transforms/Utils.h>
+
+
+
 void yyerror(const char *msg, ...);
 
 bool check_type_equality(TonyType* type1, TonyType* type2);
@@ -34,10 +43,12 @@ public:
   virtual void printOn(std::ostream &out) const = 0;
   virtual void sem() {}; // NOTE: After we implement `sem()` for all the subclasses
                          // it would make sense to make this: `virtual void sem() = 0`.
-  //void llvm_compile_and_dump(){
+  void llvm_compile_and_dump(){
     // Initialize
-    /* TheModule = make_unique<Module>("minibasic program", TheContext);
-    TheFPM = make_unique<legacy::FunctionPassManager>(TheModule.get());
+    
+    TheModule = std::make_unique<llvm::Module>("tony program", TheContext);
+
+    /* TheFPM = make_unique<legacy::FunctionPassManager>(TheModule.get());
     if (optimize) {
       TheFPM->add(createPromoteMemoryToRegisterPass());
       TheFPM->add(createInstructionCombiningPass());
@@ -45,19 +56,41 @@ public:
       TheFPM->add(createGVNPass());
       TheFPM->add(createCFGSimplificationPass());
     }
-    TheFPM->doInitialization();
-    i1 = IntegerType::get(TheContext, 1);
-    i8 = IntegerType::get(TheContext, 8);
-    i32 = IntegerType::get(TheContext, 32);
-    i64 = IntegerType::get(TheContext, 64);
-  } */
-  /* 
-  virtual Value *compile(); */
+    TheFPM->doInitialization(); */
+    i1 = llvm::IntegerType::get(TheContext, 1);
+    i8 = llvm::IntegerType::get(TheContext, 8);
+    i32 = llvm::IntegerType::get(TheContext, 32);
+    i64 = llvm::IntegerType::get(TheContext, 64);
+
+    llvm::FunctionType *main_type = llvm::FunctionType::get(i32, {}, false);
+    llvm::Function *main = llvm::Function::Create(main_type, llvm::Function::ExternalLinkage, 
+      "main", TheModule.get());
+    llvm::BasicBlock *BB = llvm::BasicBlock::Create(TheContext, "entry", main);
+    Builder.SetInsertPoint(BB);
+
+    //Emit Program Code
+    compile();
+    Builder.CreateRet(c32(0));
+  } 
+  
+  virtual llvm::Value *compile() = 0;
 protected:
   
   static llvm::LLVMContext TheContext;
   static llvm::IRBuilder<> Builder;
+  static llvm::GlobalVariable *TheVars;
+  static std::unique_ptr<llvm::Module> TheModule;
+
+  static llvm::Type *i1;
+  static llvm::Type *i8;
+  static llvm::Type *i32;
+  static llvm::Type *i64;
   
+
+  static llvm::ConstantInt *c64(int n) {
+    return llvm::ConstantInt::get(TheContext, llvm::APInt(n, 64, true));
+  }
+
   static llvm::ConstantInt *c32(int n) {
     return llvm::ConstantInt::get(TheContext, llvm::APInt(n, 32, true));
   }
@@ -66,6 +99,9 @@ protected:
     return llvm::ConstantInt::get(TheContext, llvm::APInt(c, 8, true));
   }
 
+  static llvm::ConstantInt *c1(bool b) {
+    return llvm::ConstantInt::get(TheContext, llvm::APInt(b, 1, true));
+  }
 };
 
 inline std::ostream& operator<< (std::ostream &out, const AST &t) {
@@ -145,9 +181,10 @@ public:
     // std::cout << "I think i saw a variable: " << var << " with type " << type <<"!\n";
   }
 
-/*   virtual Value *compile() override {
-
-  } */
+  // Not implemented yet
+  virtual llvm::Value *compile() override {
+    return nullptr;
+  } 
 
   virtual bool isLvalue() override{
     return true;
@@ -179,6 +216,11 @@ public:
   virtual bool isLvalue() override {
     return true;
   }
+
+  // Not implemented yet
+  virtual llvm::Value *compile() override {
+    return nullptr;
+  } 
 private:
   Atom *atom;
   Expr *expr;
@@ -199,6 +241,11 @@ public:
   virtual bool isLvalue() override {
     return false;
   }
+
+  // Not implemented yet
+  virtual llvm::Value *compile() override {
+    return nullptr;
+  } 
 private:
   std::string strlit;
 };
@@ -213,6 +260,11 @@ public:
   virtual void sem() override {
     type = new TonyType(TYPE_char, nullptr);
   }
+
+  // Not implemented yet
+  virtual llvm::Value *compile() override {
+    return nullptr;
+  } 
 private:
   unsigned char char_const;
 };
@@ -228,9 +280,9 @@ public:
     type = new TonyType(TYPE_int, nullptr);
   }
 
- /*  virtual Value *compile () override {
+  virtual llvm::Value *compile () override {
     return c32(num);
-  } */
+  } 
 private:
   int num;
 };
@@ -250,6 +302,11 @@ public:
     }
     type = new TonyType(TYPE_array, type_of_elems);
   }
+
+  // Not implemented yet
+  virtual llvm::Value *compile() override {
+    return nullptr;
+  } 
 private:
   TonyType *type_of_elems;
   Expr *expr;
@@ -269,6 +326,11 @@ public:
   virtual void sem() override {
     type = new TonyType(TYPE_list, new TonyType(TYPE_any, nullptr));
   }
+
+  // Not implemented yet
+  virtual llvm::Value *compile() override {
+    return nullptr;
+  } 
 };
 
 class Boolean: public Expr {
@@ -281,6 +343,11 @@ public:
   virtual void sem() override {
     type = new TonyType(TYPE_bool, nullptr);
   }
+
+  // Not implemented yet
+  virtual llvm::Value *compile() override {
+    return nullptr;
+  } 
 private:
   std::string boolean_value;
 };
@@ -292,7 +359,7 @@ public:
   virtual void printOn(std::ostream &out) const override {
     out << "\n<Binop op=\"" << op << "\">\n" << *left << *right << "\n</BinOp>\n";
   }
-  void sem() override {
+  virtual void sem() override {
     if (op == "+" || op == "-" || op == "*" || op == "/" || op == "mod") {
       if (!left->type_check(TYPE_int) || !right->type_check(TYPE_int)) {
         // TODO: We must be more specific in our errors. This is temporary.
@@ -330,6 +397,15 @@ public:
     } else {
       yyerror("Wrong binary operator.\n");
     }
+  }
+
+  virtual llvm::Value *compile() override{
+    llvm::Value *l = left->compile();
+    llvm::Value *r = right->compile();
+    if(op == "+") return Builder.CreateAdd(l, r, "addtmp");
+    else yyerror("Operation not supported yet");
+    return nullptr;
+    
   }
 private:
   Expr *left;
@@ -396,6 +472,11 @@ public:
       type = new TonyType(TYPE_bool, nullptr); 
     }
   }
+
+  // Not implemented yet
+  virtual llvm::Value *compile() override {
+    return nullptr;
+  } 
 private:
   std::string op;
   Expr *right;
@@ -437,6 +518,11 @@ public:
     for (Id * i : ids) {i->set_type(type); i->insertIntoScope();}
   }
 
+  // Not implemented yet
+  virtual llvm::Value *compile() override {
+    return nullptr;
+  } 
+
   std::pair<TonyType*, int> getArgs(){
     std::pair<TonyType*, int> p1;
     p1.first = type;
@@ -465,6 +551,11 @@ public:
   std::pair<TonyType*, int> getArgs() {
     return var_list->getArgs();
   }
+
+  // Not implemented yet
+  virtual llvm::Value *compile() override {
+    return nullptr;
+  } 
 private:
   VarList* var_list;
   bool is_ref;
@@ -497,6 +588,11 @@ public:
   virtual void sem() override {
     for (Formal *f: formals) f->sem();
   }
+
+  // Not implemented yet
+  virtual llvm::Value *compile() override {
+    return nullptr;
+  } 
 
   //This is fine, don't need pointers
   std::vector<TonyType *> getArgs(){
@@ -612,6 +708,11 @@ public:
     return isTyped;
   }
 
+  // Not implemented yet
+  virtual llvm::Value *compile() override {
+    return nullptr;
+  } 
+
 private:
   TonyType *type;
   FormalList *formals;
@@ -634,6 +735,11 @@ public:
       }
     st.setScopeHasReturn();
   }
+
+  // Not implemented yet
+  virtual llvm::Value *compile() override {
+    return nullptr;
+  } 
 private:
   Expr* ret_expr;
 };
@@ -651,6 +757,11 @@ public:
         yyerror("Exit from a typed function.");
     }
   }
+
+  // Not implemented yet
+  virtual llvm::Value *compile() override {
+    return nullptr;
+  } 
 };
 
 class StmtBody: public AST {
@@ -676,6 +787,14 @@ public:
     for (Stmt *s : stmts) {
       s->sem();
     }
+    
+  }
+
+  virtual llvm::Value *compile() override {
+    for (Stmt *s : stmts) {
+      s->compile();
+    }
+    return nullptr;
   }
   
 private:
@@ -698,6 +817,10 @@ public:
       yyerror("Atom is not a valid l-value.");
     }
   }
+  // Not implemented yet
+  virtual llvm::Value *compile() override {
+    return expr->compile();
+  } 
 private:
   Atom *atom;
   Expr *expr;
@@ -711,6 +834,10 @@ public:
   virtual void printOn(std::ostream &out) const override {
     out << "\n<Skip>\n";
   }
+  // Not implemented yet
+  virtual llvm::Value *compile() override {
+    return nullptr;
+  } 
 
   void sem() override {}
 };
@@ -747,6 +874,10 @@ public:
     out << "<Elsif> </Elsif>";
   }
   virtual void sem() override {}
+  // Not implemented yet
+  virtual llvm::Value *compile() override {
+    return nullptr;
+  } 
 
 private:
   std::vector<Expr *> elsif_conds;
@@ -782,6 +913,10 @@ public:
   }
 
   virtual void sem() override {}
+  // Not implemented yet
+  virtual llvm::Value *compile() override {
+    return nullptr;
+  } 
 
 private:
   std::vector<StmtBody *> else_stmt;
@@ -841,6 +976,11 @@ public:
     }
   }
 
+  // Not implemented yet
+  virtual llvm::Value *compile() override {
+    return nullptr;
+  } 
+
 private:
   std::vector<Expr *>     conditions;
   std::vector<StmtBody *> statements;
@@ -874,6 +1014,11 @@ public:
       s->sem();
     }
   }
+
+  // Not implemented yet
+  virtual llvm::Value *compile() override {
+    return nullptr;
+  } 
 private:
   std::vector<Simple *> simples;
 };
@@ -902,6 +1047,11 @@ public:
     simple_list_2->sem();
     stmt_body->sem();
   }
+
+  // Not implemented yet
+  virtual llvm::Value *compile() override {
+    return nullptr;
+  } 
 
 private:
   SimpleList *simple_list_1;
@@ -936,6 +1086,11 @@ public:
   virtual void sem() override {
     for (auto i : expressions) i->sem();
   }
+
+  // Not implemented yet
+  virtual llvm::Value *compile() override {
+    return nullptr;
+  } 
 private:
   std::vector<Expr*> expressions;
 };
@@ -980,6 +1135,11 @@ public:
     return false;
   }
 
+  // Not implemented yet
+  virtual llvm::Value *compile() override {
+    return nullptr;
+  } 
+
 private:
   Id *name;
   ExprList *params;
@@ -997,6 +1157,11 @@ public:
   virtual void sem() override {
     header->semHeaderDecl();
   }
+
+  // Not implemented yet
+  virtual llvm::Value *compile() override {
+    return nullptr;
+  } 
 
 private:
   Header *header;
@@ -1124,6 +1289,12 @@ public:
     //st.printSymbolTable();
     st.closeScope();
   }
+
+  virtual llvm::Value *compile () override {
+    return body->compile();
+  } 
+
+
 
 
 private:
