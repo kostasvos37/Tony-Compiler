@@ -1,4 +1,4 @@
-def main():
-    int x
-    x := 5
+def whatever(int x,y; char l):
+    int z
+    x := 5 + 7
 end

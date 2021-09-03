@@ -62,15 +62,8 @@ public:
     i32 = llvm::IntegerType::get(TheContext, 32);
     i64 = llvm::IntegerType::get(TheContext, 64);
 
-    llvm::FunctionType *main_type = llvm::FunctionType::get(i32, {}, false);
-    llvm::Function *main = llvm::Function::Create(main_type, llvm::Function::ExternalLinkage, 
-      "main", TheModule.get());
-    llvm::BasicBlock *BB = llvm::BasicBlock::Create(TheContext, "entry", main);
-    Builder.SetInsertPoint(BB);
-
     //Emit Program Code
     compile();
-    Builder.CreateRet(c32(0));
     bool bad = llvm::verifyModule(*TheModule, &llvm::errs());
     if (bad){
       std::cerr << "The IR is bad!\n";
@@ -87,6 +80,7 @@ protected:
   static llvm::IRBuilder<> Builder;
   static llvm::GlobalVariable *TheVars;
   static std::unique_ptr<llvm::Module> TheModule;
+  static std::map<std::string, llvm::Value*> NamedValues;
 
   static llvm::Type *i1;
   static llvm::Type *i8;
@@ -184,7 +178,10 @@ public:
 
   // Not implemented yet
   virtual llvm::Value *compile() override {
-    return nullptr;
+    llvm::Value *V = NamedValues[var];
+    if(!V)
+      yyerror("Variable not Found");
+    return V;
   } 
 
   virtual bool isLvalue() override{
@@ -531,6 +528,12 @@ public:
     return p1;
   }
 
+  std::vector<std::string> getNames(){
+    std::vector<std::string> ret;
+    for (Id * i: ids) ret.push_back(i->getName());
+    return ret;
+  }
+
 protected:
   std::vector<Id *> ids;
   TonyType* type;
@@ -551,6 +554,10 @@ public:
   //TODO: Handle refs
   std::pair<TonyType*, int> getArgs() {
     return var_list->getArgs();
+  }
+
+  std::vector<std::string> getNames() {
+    return var_list->getNames();
   }
 
   // Not implemented yet
@@ -602,6 +609,18 @@ public:
       std::pair<TonyType*, int> p1 = f->getArgs(); 
       for (int i=0; i < p1.second; i++){
         ret.push_back(p1.first);
+      }
+    }
+
+    return ret;
+  }
+
+  std::vector<std::string> getNames(){
+    std::vector<std::string> ret;
+    for (Formal *f: formals){
+      std::vector<std::string> p1 = f->getNames(); 
+      for (int i=0; i < p1.size(); i++){
+        ret.push_back(p1[i]);
       }
     }
 
@@ -710,8 +729,26 @@ public:
   }
 
   // Not implemented yet
-  virtual llvm::Value *compile() override {
-    return nullptr;
+  virtual llvm::Function *compile() override {
+    
+    llvm::Twine name = llvm::Twine(id->getName());
+    std::vector<TonyType *> args;
+    std::vector<std::string> names;
+    if (formals){
+      args = formals->getArgs();
+      names = formals->getNames();
+    }
+
+    std::vector<llvm::Type *> ArgumentTypes(args.size(), i32);
+    llvm::FunctionType *FT = llvm::FunctionType::get(i32, ArgumentTypes, false);
+    llvm::Function *F = llvm::Function::Create(FT, llvm::Function::ExternalLinkage, 
+      name, TheModule.get());
+    
+    unsigned i = 0;
+    for (auto &Arg: F->args()) Arg.setName(names[i++]);
+
+
+    return F;
   } 
 
 private:
@@ -1292,7 +1329,21 @@ public:
   }
 
   virtual llvm::Value *compile () override {
-    return body->compile();
+    
+    // Create the function based on header
+    llvm::Function *fun = header->compile();
+    
+    //Create Basic block
+    llvm::BasicBlock *BB = llvm::BasicBlock::Create(TheContext, "entry", fun);
+    Builder.SetInsertPoint(BB);    
+    
+    //Insert values into table
+    NamedValues.clear();
+    //for (auto &arg: fun->args()) NamedValues[arg.getName()] = &arg;
+    
+    body->compile();
+    
+    return nullptr;
   } 
 
 
