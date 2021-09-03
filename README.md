@@ -4,4 +4,4 @@ A compiler for Tony language...obviously.
 ### Run a Tony Program
 - cd Tony-Compiler
 - make
-- cat my_program.tony | ./tony
+- ./tony my_program.tony
