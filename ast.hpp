@@ -80,7 +80,7 @@ protected:
   static llvm::IRBuilder<> Builder;
   static llvm::GlobalVariable *TheVars;
   static std::unique_ptr<llvm::Module> TheModule;
-  static std::map<std::string, llvm::Value*> NamedValues;
+  static std::map<std::string, llvm::AllocaInst*> NamedValues;
 
   static llvm::Type *i1;
   static llvm::Type *i8;
@@ -96,6 +96,11 @@ protected:
   }
   static llvm::ConstantInt* c64(int n) {
     return llvm::ConstantInt::get(TheContext, llvm::APInt(64, n, true));
+  }
+
+  static llvm::AllocaInst *CreateEntryBlockAlloca (llvm::Function *TheFunction, const std::string &VarName, llvm::Type* Ty){
+    llvm::IRBuilder<> TmpB(&TheFunction->getEntryBlock(), TheFunction->getEntryBlock().begin());
+    return TmpB.CreateAlloca(Ty, 0, VarName.c_str());
   }
 };
 
@@ -181,7 +186,7 @@ public:
     llvm::Value *V = NamedValues[var];
     if(!V)
       yyerror("Variable not Found");
-    return V;
+    return Builder.CreateLoad(V, var.c_str());
   } 
 
   virtual bool isLvalue() override{
@@ -1339,8 +1344,12 @@ public:
     
     //Insert values into table
     NamedValues.clear();
-    //for (auto &arg: fun->args()) NamedValues[arg.getName()] = &arg;
-    
+    for (auto &arg: fun->args()) {
+      llvm::AllocaInst * Alloca = CreateEntryBlockAlloca(fun, arg.getName().str(), i32);
+
+      Builder.CreateStore(&arg, Alloca);
+      NamedValues[arg.getName().str()] = Alloca;
+    }
     body->compile();
     
     return nullptr;
