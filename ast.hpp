@@ -88,6 +88,12 @@ protected:
   static llvm::Type *i64;
   
 
+  static llvm::ConstantInt* c1(bool b) {
+    if(b) return llvm::ConstantInt::getTrue(TheContext);
+    else return llvm::ConstantInt::getFalse(TheContext);
+    
+  }
+
   static llvm::ConstantInt* c8(char c) {
     return llvm::ConstantInt::get(TheContext, llvm::APInt(8, c, true));
   }
@@ -96,6 +102,16 @@ protected:
   }
   static llvm::ConstantInt* c64(int n) {
     return llvm::ConstantInt::get(TheContext, llvm::APInt(64, n, true));
+  }
+
+  static llvm::Type* convertType(TonyType *t) {
+    switch(t->get_current_type()){
+      case TYPE_int: return i32;
+      case TYPE_bool: return i1;
+      case TYPE_char: return i8;
+      default: yyerror("Type conversion not implemented yet");
+      return nullptr;
+    }
   }
 
   static llvm::AllocaInst *CreateEntryBlockAlloca (llvm::Function *TheFunction, const std::string &VarName, llvm::Type* Ty){
@@ -275,7 +291,7 @@ public:
 
   // Not implemented yet
   virtual llvm::Value *compile() override {
-    return nullptr;
+    return c8(char_const);
   } 
 private:
   unsigned char char_const;
@@ -347,7 +363,10 @@ public:
 
 class Boolean: public Expr {
 public:
-  Boolean(std::string b): boolean_value(b) {}
+  Boolean(std::string b1): boolean_value(b1) {
+    if (b1=="true") b=true;
+    else b=false;
+  }
   ~Boolean() {}
   virtual void printOn(std::ostream &out) const override {
     out << "<Boolean value=" << boolean_value << "> ";
@@ -358,10 +377,11 @@ public:
 
   // Not implemented yet
   virtual llvm::Value *compile() override {
-    return nullptr;
+    return c1(b);
   } 
 private:
   std::string boolean_value;
+  bool b;
 };
 
 class BinOp: public Expr {
@@ -414,8 +434,22 @@ public:
   virtual llvm::Value *compile() override{
     llvm::Value *l = left->compile();
     llvm::Value *r = right->compile();
-    if(op == "+") return Builder.CreateAdd(l, r, "addtmp");
-    else yyerror("Operation not supported yet");
+    
+    if(op ==  "+")          return Builder.CreateAdd(l, r, "addtmp");
+    else if(op ==  "-")     return Builder.CreateSub(l, r, "subtmp");
+    else if(op ==  "*")     return Builder.CreateMul(l, r, "multmp");
+    else if(op ==  "/")     return Builder.CreateSDiv(l, r, "divtmp");
+    else if(op ==  "mod")   return Builder.CreateSRem(l, r, "remtmp");
+    else if(op ==  "=")     return Builder.CreateICmpEQ(l,r, "eqtmp");
+    else if(op ==  "<>")    return Builder.CreateICmpNE(l,r, "neqtmp");
+    else if(op ==  "+")     return Builder.CreateICmpSLT(l,r, "slttmp");
+    else if(op ==  ">")     return Builder.CreateICmpSGT(l,r, "sgttmp");
+    else if(op ==  "<=")    return Builder.CreateICmpSLE(l,r, "sletmp");
+    else if(op ==  ">=")    return Builder.CreateICmpSGE(l,r, "sgetmp");
+    else if(op ==  "and")   return Builder.CreateAnd(l,r, "andtmp");
+    else if(op ==  "or")    return Builder.CreateOr(l,r, "ortmp");
+    else if(op ==  "#")     yyerror("Operation not supported yet");
+    else                    yyerror("Operation not supported yet");
     return nullptr;
     
   }
