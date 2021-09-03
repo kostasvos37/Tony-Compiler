@@ -142,6 +142,7 @@ class Stmt: public AST {
 class Atom: public Expr { 
 public:
   virtual bool isLvalue() {return false;}
+  virtual std::string getName() = 0;
 };
 
 class Simple: public Stmt {  
@@ -167,7 +168,7 @@ public:
     st.insertIntoParentScope(var, type);
   }
 
-  std::string getName(){
+  virtual std::string getName() override{
     return var;
   }
 
@@ -220,6 +221,10 @@ public:
     return true;
   }
 
+  virtual std::string getName() override {
+    return atom->getName();
+  }
+
   // Not implemented yet
   virtual llvm::Value *compile() override {
     return nullptr;
@@ -243,6 +248,10 @@ public:
 
   virtual bool isLvalue() override {
     return false;
+  }
+
+  virtual std::string getName() override {
+    return strlit;
   }
 
   // Not implemented yet
@@ -862,7 +871,14 @@ public:
   }
   // Not implemented yet
   virtual llvm::Value *compile() override {
-    return expr->compile();
+    llvm::Value * Val = expr->compile();
+    if(!atom->isLvalue()){
+      yyerror("Atom is not a valid l-value.");
+    }
+
+    llvm::Value *Variable = NamedValues[atom->getName()];
+    Builder.CreateStore(Val, Variable);
+    return Val;
   } 
 private:
   Atom *atom;
@@ -1182,6 +1198,10 @@ public:
   virtual llvm::Value *compile() override {
     return nullptr;
   } 
+
+  virtual std::string getName() override {
+    return name->getName();
+  }
 
 private:
   Id *name;
