@@ -565,10 +565,16 @@ public:
     for (Id * i : ids) {i->set_type(type); i->insertIntoScope();}
   }
 
-  // Not implemented yet
+  // This is called when defining variables
   virtual llvm::Value *compile() override {
+    for (Id * id: ids){
+      llvm::AllocaInst * Alloca = Builder.CreateAlloca(convertType(type), 0, id->getName());
+      NamedValues[id->getName()] = Alloca;
+    }
     return nullptr;
   } 
+
+
 
   std::pair<TonyType*, int> getArgs(){
     std::pair<TonyType*, int> p1;
@@ -1408,6 +1414,7 @@ public:
       Builder.CreateStore(&arg, Alloca);
       NamedValues[arg.getName().str()] = Alloca;
     }
+    for(AST *a: local_definitions) a->compile();
     body->compile();
     Builder.CreateRet(c32(0));
     
