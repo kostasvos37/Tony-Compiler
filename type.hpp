@@ -26,6 +26,16 @@ public:
         return returnType;
     }
 
+    int get_array_size() {
+        if (current_type != TYPE_array) yyerror("No array size for non-array type.");
+        return size;
+    }
+
+    void set_array_size(int n) {
+      if (current_type != TYPE_array) yyerror("No array size for non-array type.");
+      size = n;
+    }
+
     std::vector<TonyType *> get_function_args (){
       return function_args;
     }
@@ -44,6 +54,9 @@ protected:
     TonyType *returnType;
     std::vector<TonyType *> function_args;
     bool declDef;
+
+    //For arrays only
+    int size;
 };
 
 bool check_type_equality(TonyType* type1, TonyType* type2);

@@ -329,6 +329,7 @@ public:
       yyerror("Array index not an integer.");
     }
     type = new TonyType(TYPE_array, type_of_elems);
+    
   }
 
   // Not implemented yet
@@ -787,7 +788,10 @@ public:
       names = formals->getNames();
     }
 
-    std::vector<llvm::Type *> ArgumentTypes(args.size(), i32);
+    std::vector<llvm::Type *> ArgumentTypes;
+    for (auto i: args){
+      ArgumentTypes.push_back(convertType(i));
+    }
     llvm::FunctionType *FT = llvm::FunctionType::get(i32, ArgumentTypes, false);
     llvm::Function *F = llvm::Function::Create(FT, llvm::Function::ExternalLinkage, 
       name, TheModule.get());
@@ -1399,12 +1403,13 @@ public:
     //Insert values into table
     NamedValues.clear();
     for (auto &arg: fun->args()) {
-      llvm::AllocaInst * Alloca = CreateEntryBlockAlloca(fun, arg.getName().str(), i32);
+      llvm::AllocaInst * Alloca = CreateEntryBlockAlloca(fun, arg.getName().str(), arg.getType());
 
       Builder.CreateStore(&arg, Alloca);
       NamedValues[arg.getName().str()] = Alloca;
     }
     body->compile();
+    Builder.CreateRet(c32(0));
     
     return nullptr;
   } 
