@@ -1,7 +1,7 @@
 #include "ast.hpp"
 
 LLVMContext AST::TheContext;
-IRBuilder<> AST::Builder(TheContext);
+IRBuilder<> AST::Builder(AST::TheContext);
 std::unique_ptr<Module> AST::TheModule;
 std::unique_ptr<legacy::FunctionPassManager> AST::TheFPM;
 

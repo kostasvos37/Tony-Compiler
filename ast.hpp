@@ -834,6 +834,8 @@ public:
 
   // Not implemented yet
   virtual llvm::Value *compile() override {
+    llvm::Value * V= ret_expr->compile();
+    Builder.CreateRet(V);
     return nullptr;
   } 
 private:
@@ -1416,7 +1418,8 @@ public:
     }
     for(AST *a: local_definitions) a->compile();
     body->compile();
-    Builder.CreateRet(c32(0));
+    if(!header->getIsTyped())
+      Builder.CreateRet(nullptr);
     
     return nullptr;
   } 

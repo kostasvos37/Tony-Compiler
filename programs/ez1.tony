@@ -1,4 +1,6 @@
-def whatever(int x,y; char l):
+def int whatever(int x,y; bool l):
     int z
-    x := 5 + 7
+    l := true
+    z := x+y+1/2
+    return z
 end
