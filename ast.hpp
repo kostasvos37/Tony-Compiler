@@ -62,6 +62,16 @@ public:
     i32 = llvm::IntegerType::get(TheContext, 32);
     i64 = llvm::IntegerType::get(TheContext, 64);
 
+    //Initialize library functions
+    // We use 'TheMalloc' to allocate memory blocks with LLVM.
+    // This is needed currently for creating Tony lists.
+    llvm::FunctionType *malloc_type = 
+      llvm::FunctionType::get(llvm::PointerType::get(i8, 0),
+                              {i64}, false);
+    TheMalloc = 
+      llvm::Function::Create(malloc_type, llvm::Function::ExternalLinkage,
+                             "GC_malloc", TheModule.get());
+
     //Emit Program Code
     compile();
     bool bad = llvm::verifyModule(*TheModule, &llvm::errs());
@@ -80,6 +90,7 @@ protected:
   static llvm::IRBuilder<> Builder;
   static llvm::GlobalVariable *TheVars;
   static std::unique_ptr<llvm::Module> TheModule;
+  static llvm::Function *TheMalloc;
   static std::map<std::string, llvm::AllocaInst*> NamedValues;
 
   static llvm::Type *i1;
@@ -449,7 +460,12 @@ public:
     else if(op ==  ">=")    return Builder.CreateICmpSGE(l,r, "sgetmp");
     else if(op ==  "and")   return Builder.CreateAnd(l,r, "andtmp");
     else if(op ==  "or")    return Builder.CreateOr(l,r, "ortmp");
-    else if(op ==  "#")     yyerror("Operation not supported yet");
+    else if(op ==  "#") {
+      //Allocate memory for head::(value, next)
+      //Store value in head::value
+      //Store address of right in head::next
+      //Return LLVM::Value for the whole list
+    }
     else                    yyerror("Operation not supported yet");
     return nullptr;
     
