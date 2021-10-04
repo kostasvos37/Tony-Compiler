@@ -1,6 +1,11 @@
-def int whatever(int x,y; bool l):
-    int z
-    l := true
-    z := x+y+1/2
-    return z
+def int main():
+    int n
+    n:=0
+    if n < 0:
+        n := 0
+    else:
+        n := 1
+    end
+    return n
+
 end

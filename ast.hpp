@@ -454,7 +454,7 @@ public:
     else if(op ==  "mod")   return Builder.CreateSRem(l, r, "remtmp");
     else if(op ==  "=")     return Builder.CreateICmpEQ(l,r, "eqtmp");
     else if(op ==  "<>")    return Builder.CreateICmpNE(l,r, "neqtmp");
-    else if(op ==  "+")     return Builder.CreateICmpSLT(l,r, "slttmp");
+    else if(op ==  "<")     return Builder.CreateICmpSLT(l,r, "slttmp");
     else if(op ==  ">")     return Builder.CreateICmpSGT(l,r, "sgttmp");
     else if(op ==  "<=")    return Builder.CreateICmpSLE(l,r, "sletmp");
     else if(op ==  ">=")    return Builder.CreateICmpSGE(l,r, "sgetmp");
@@ -1106,6 +1106,46 @@ public:
 
   // Not implemented yet
   virtual llvm::Value *compile() override {
+    llvm::Value *cond = conditions[0]->compile();
+    if(!cond) return nullptr;
+
+    //Convert Condition to bool
+
+    cond = Builder.CreateICmpNE(cond, c1(0), "ifcond");
+
+    llvm::Function *TheFunction = Builder.GetInsertBlock()->getParent();
+
+    //Create Basic Blocks
+    llvm::BasicBlock *ThenBB = llvm::BasicBlock::Create(TheContext, "then", TheFunction);
+    llvm::BasicBlock *ElseBB = llvm::BasicBlock::Create(TheContext, "else");
+    llvm::BasicBlock *MergeBB= llvm::BasicBlock::Create(TheContext, "ifcont");
+
+    Builder.CreateCondBr(cond, ThenBB, ElseBB);
+
+    Builder.SetInsertPoint(ThenBB);
+
+    // Then Statement
+    statements[0]->compile();
+    
+    Builder.CreateBr(MergeBB);
+    ThenBB = Builder.GetInsertBlock();
+    // Emit else block
+    TheFunction->getBasicBlockList().push_back(ElseBB);
+    
+    Builder.SetInsertPoint(ElseBB);
+
+    //Else statement
+    statements[1]->compile();
+
+    Builder.CreateBr(MergeBB);
+
+    //Update current block, code for else can change it
+    ElseBB = Builder.GetInsertBlock();
+    
+    //Emit Merge Block
+    TheFunction->getBasicBlockList().push_back(MergeBB);
+    Builder.SetInsertPoint(MergeBB);
+
     return nullptr;
   } 
 
