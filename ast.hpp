@@ -519,9 +519,16 @@ public:
       type = new TonyType(TYPE_bool, nullptr); 
     }
   }
-
-  // Not implemented yet
+  // TODO: Add logic for lists
   virtual llvm::Value *compile() override {
+    llvm::Value *r = right->compile();
+
+    if (op == "+")     return r;
+    if (op == "-")     return Builder.CreateNeg(r);
+    if (op == "not")   return Builder.CreateNot(r);
+    if (op == "head")  return nullptr;
+    if (op == "tail")  return nullptr;
+    if (op == "nil?")  return nullptr;
     return nullptr;
   } 
 private:
