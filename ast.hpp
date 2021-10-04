@@ -4,6 +4,7 @@
 #pragma once
 
 #include <iostream>
+#include <fstream>
 #include <map>
 #include <vector>
 #include <string>
@@ -80,8 +81,11 @@ public:
       TheModule->print(llvm::errs(), nullptr);
       std::exit(1);
     }
-    TheModule->print(llvm::outs(), nullptr);
-  } 
+    std::error_code EC;
+  
+    llvm::raw_ostream *out = new llvm::raw_fd_ostream("out.ll", EC);
+    TheModule->print(*out, nullptr);
+  }
   
   virtual llvm::Value *compile() = 0;
 protected:

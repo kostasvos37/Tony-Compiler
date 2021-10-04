@@ -28,7 +28,7 @@ lextest: lexer_pure.cpp
 	$(CXX) $(CXXFLAGS) -o lextest lexer_pure.cpp
 
 clean:
-	$(RM) lexer.cpp lexer_pure.cpp parser.cpp parser.hpp parser.output *.o tony lextest *.hpp.gch
+	$(RM) lexer.cpp lexer_pure.cpp parser.cpp parser.hpp parser.output *.o *.ll tony lextest *.hpp.gch
 
 distclean: clean
 	$(RM) tony lextest
