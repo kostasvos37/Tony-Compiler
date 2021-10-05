@@ -199,12 +199,12 @@ public:
     type = t;
   }
 
-  void insertIntoScope(){
-    st.insert(var, type);
+  void insertIntoScope(TableType l){
+    st.insert(var, type, l);
   }
 
-  void insertIntoParentScope(){
-    st.insertIntoParentScope(var, type);
+  void insertIntoParentScope(TableType l){
+    st.insertIntoParentScope(var, type, l);
   }
 
   virtual std::string getName() override{
@@ -212,7 +212,7 @@ public:
   }
 
   virtual void sem() override {
-    SymbolEntry *e = st.lookup(var);
+    SymbolEntry *e = st.lookup(var, T_BOTH);
     if(e == nullptr) {
       yyerror("Variable \"%s\" not found!", var.c_str());
     } 
@@ -597,7 +597,7 @@ public:
   }
   
   virtual void sem() override {
-    for (Id * i : ids) {i->set_type(type); i->insertIntoScope();}
+    for (Id * i : ids) {i->set_type(type); i->insertIntoScope(T_VAR);}
   }
 
   // This is called when defining variables
@@ -766,7 +766,7 @@ public:
       fun = new TonyType(TYPE_function, nullptr, type, args, true); 
     }
     id->set_type(fun);
-    id->insertIntoScope();  
+    id->insertIntoScope(T_FUNC);  
   }
 
   // TODO: Mulptiple DEFINITIONS (not declarations)
@@ -787,7 +787,7 @@ public:
     id->set_type(fun);
     
     // Check if function is previously defined
-    SymbolEntry *e = st.lookupParentScope(id->getName());
+    SymbolEntry *e = st.lookupParentScope(id->getName(), T_FUNC);
     if(e != nullptr) {
       //Function either declared or defined
       TonyType *t = e->type;
@@ -809,7 +809,7 @@ public:
 
 
     if(st.hasParentScope()){
-      id->insertIntoParentScope();
+      id->insertIntoParentScope(T_FUNC);
     }
     
   }
@@ -1367,77 +1367,77 @@ public:
   void initFunctions(){
     //puti
     std::vector<TonyType*> v {new TonyType(TYPE_int, nullptr)};
-    st.insert(std::string("puti"), new TonyType(TYPE_function, nullptr,new TonyType(TYPE_void, nullptr), v, true));
+    st.insert(std::string("puti"), new TonyType(TYPE_function, nullptr,new TonyType(TYPE_void, nullptr), v, true), T_FUNC);
     //putc
     v.clear();
     v.push_back(new TonyType(TYPE_char, nullptr));
-    st.insert(std::string("putc"), new TonyType(TYPE_function, nullptr,new TonyType(TYPE_void, nullptr), v, true));
+    st.insert(std::string("putc"), new TonyType(TYPE_function, nullptr,new TonyType(TYPE_void, nullptr), v, true), T_FUNC);
 
     //putb
     v.clear();
     v.push_back(new TonyType(TYPE_bool, nullptr));
-    st.insert(std::string("putb"), new TonyType(TYPE_function, nullptr,new TonyType(TYPE_void, nullptr), v, true));
+    st.insert(std::string("putb"), new TonyType(TYPE_function, nullptr,new TonyType(TYPE_void, nullptr), v, true), T_FUNC);
     
     //puts
     v.clear();
     v.push_back(new TonyType(TYPE_array, new TonyType(TYPE_char, nullptr)));
-    st.insert(std::string("puts"), new TonyType(TYPE_function, nullptr,new TonyType(TYPE_void, nullptr), v, true));
+    st.insert(std::string("puts"), new TonyType(TYPE_function, nullptr,new TonyType(TYPE_void, nullptr), v, true), T_FUNC);
 
     //geti
     v.clear();
-    st.insert(std::string("geti"), new TonyType(TYPE_function, nullptr, new TonyType(TYPE_int, nullptr), v, true));
+    st.insert(std::string("geti"), new TonyType(TYPE_function, nullptr, new TonyType(TYPE_int, nullptr), v, true), T_FUNC);
 
     //getb
     v.clear();
-    st.insert(std::string("getb"), new TonyType(TYPE_function, nullptr, new TonyType(TYPE_bool, nullptr), v, true));
+    st.insert(std::string("getb"), new TonyType(TYPE_function, nullptr, new TonyType(TYPE_bool, nullptr), v, true), T_FUNC);
 
     //getc
     v.clear();
-    st.insert(std::string("getc"), new TonyType(TYPE_function, nullptr, new TonyType(TYPE_char, nullptr), v, true));
+    st.insert(std::string("getc"), new TonyType(TYPE_function, nullptr, new TonyType(TYPE_char, nullptr), v, true), T_FUNC);
 
     //gets
     v.clear();
     v.push_back(new TonyType(TYPE_int, nullptr));
     v.push_back(new TonyType(TYPE_array, new TonyType(TYPE_char, nullptr)));
-    st.insert(std::string("gets"), new TonyType(TYPE_function, nullptr, new TonyType(TYPE_void, nullptr), v, true));
+    st.insert(std::string("gets"), new TonyType(TYPE_function, nullptr, new TonyType(TYPE_void, nullptr), v, true), T_FUNC);
 
     //abs
     v.clear();
     v.push_back(new TonyType(TYPE_int, nullptr));
-    st.insert(std::string("abs"), new TonyType(TYPE_function, nullptr, new TonyType(TYPE_int, nullptr), v, true));
+    st.insert(std::string("abs"), new TonyType(TYPE_function, nullptr, new TonyType(TYPE_int, nullptr), v, true), T_FUNC);
 
     //ord
     v.clear();
     v.push_back(new TonyType(TYPE_char, nullptr));
-    st.insert(std::string("ord"), new TonyType(TYPE_function, nullptr, new TonyType(TYPE_int, nullptr), v, true));
+    st.insert(std::string("ord"), new TonyType(TYPE_function, nullptr, new TonyType(TYPE_int, nullptr), v, true), T_FUNC);
 
     //chr
     v.clear();
     v.push_back(new TonyType(TYPE_int, nullptr));
-    st.insert(std::string("chr"), new TonyType(TYPE_function, nullptr, new TonyType(TYPE_char, nullptr), v, true));
+    st.insert(std::string("chr"), new TonyType(TYPE_function, nullptr, new TonyType(TYPE_char, nullptr), v, true), T_FUNC);
 
     //strlen
     v.clear();
     v.push_back(new TonyType(TYPE_array, new TonyType(TYPE_char, nullptr)));
-    st.insert(std::string("strlen"), new TonyType(TYPE_function, nullptr, new TonyType(TYPE_int, nullptr), v, true));
+    st.insert(std::string("strlen"), new TonyType(TYPE_function, nullptr, new TonyType(TYPE_int, nullptr), v, true), T_FUNC);
 
     //strcmp
     v.clear();
     v.push_back(new TonyType(TYPE_array, new TonyType(TYPE_char, nullptr)));
     v.push_back(new TonyType(TYPE_array, new TonyType(TYPE_char, nullptr)));
-    st.insert(std::string("strcmp"), new TonyType(TYPE_function, nullptr, new TonyType(TYPE_int, nullptr), v, true));
+    st.insert(std::string("strcmp"), new TonyType(TYPE_function, nullptr, new TonyType(TYPE_int, nullptr), v, true), T_FUNC);
 
     //strcpy
     v.clear();
     v.push_back(new TonyType(TYPE_array, new TonyType(TYPE_char, nullptr)));
     v.push_back(new TonyType(TYPE_array, new TonyType(TYPE_char, nullptr)));
-    st.insert(std::string("strcpy"), new TonyType(TYPE_function, nullptr, new TonyType(TYPE_void, nullptr), v, true));
+    st.insert(std::string("strcpy"), new TonyType(TYPE_function, nullptr, new TonyType(TYPE_void, nullptr), v, true), T_FUNC);
 
     //strcat
     v.clear();
     v.push_back(new TonyType(TYPE_array, new TonyType(TYPE_char, nullptr)));
     v.push_back(new TonyType(TYPE_array, new TonyType(TYPE_char, nullptr)));
-    st.insert(std::string("strcat"), new TonyType(TYPE_function, nullptr, new TonyType(TYPE_void, nullptr), v, true));
+    st.insert(std::string("strcat"), new TonyType(TYPE_function, nullptr, new TonyType(TYPE_void, nullptr), v, true), T_FUNC);
 
   }
 

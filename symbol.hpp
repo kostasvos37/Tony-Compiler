@@ -11,6 +11,8 @@
 
 void yyerror(const char *msg, ...);
 
+enum TableType {T_FUNC, T_VAR, T_BOTH};
+
 struct SymbolEntry {
     TonyType* type;
     SymbolEntry() {}
@@ -19,15 +21,33 @@ struct SymbolEntry {
 
 class Scope {
 public:
-    Scope(TonyType *t) : locals(), size(0), returnType(t), hasReturn(false) {}
-    SymbolEntry *lookup(std::string c) {
+    Scope(TonyType *t) : locals(), functions(), size(0), returnType(t), hasReturn(false) {}
+    
+    SymbolEntry *lookupVar(std::string c) {
         if (locals.find(c) == locals.end()) {return nullptr;}
         return &locals[c];
     }
+    SymbolEntry *lookupFunc(std::string c) {
+        if (functions.find(c) == functions.end()) {return nullptr;}
+        return &functions[c];
+    }
+
+    SymbolEntry *lookupBoth(std::string c) {
+        if (locals.find(c) != locals.end()) return &locals[c];
+
+        if (functions.find(c) == functions.end()) {return nullptr;}
+        return &functions[c];
+    }
         
-    void insert(std::string c, TonyType* t){
+    void insertVar(std::string c, TonyType* t){
         if (locals.find(c) != locals.end()) yyerror("Variable already declared");
         locals[c] = SymbolEntry(t);
+        ++size;
+    }
+
+    void insertFunc(std::string c, TonyType* t){
+        if (functions.find(c) != functions.end()) yyerror("Function already declared");
+        functions[c] = SymbolEntry(t);
         ++size;
     }
     int getSize() const { return size; }
@@ -35,9 +55,13 @@ public:
 
     //For testing
     void printScope(int ident) { 
+        
         for (auto i = locals.begin(); i != locals.end(); ++i){
             std::cout << std::string(ident*4, ' ') << i->first << " " << i->second.type << std::endl;
-        }  
+        } 
+        for (auto i = functions.begin(); i != functions.end(); ++i){
+            std::cout << std::string(ident*4, ' ') << i->first << " " << i->second.type << std::endl;
+        }   
     }
     void setHasReturn(){
         hasReturn = true;
@@ -47,6 +71,7 @@ public:
     }
 private:
     std::map<std::string, SymbolEntry> locals;
+    std::map<std::string, SymbolEntry> functions;
     int size;
     TonyType *returnType;
     bool hasReturn;
@@ -54,35 +79,45 @@ private:
 
 class SymbolTable{
 public: 
-    SymbolEntry *lookup(std::string c) {
+    SymbolEntry *lookup(std::string c, TableType l) {
         for (auto i = scopes.rbegin(); i!= scopes.rend(); i++){
-            SymbolEntry *e = i->lookup(c);
+            SymbolEntry *e;
+            if (l == T_VAR)         e = i->lookupVar(c);
+            else if (l == T_FUNC)   e = i->lookupFunc(c);
+            else                    e = i->lookupBoth(c);
             if (e!= nullptr) return e;
         }
         return nullptr;
     }
 
-    SymbolEntry *lookupCurentScope(std::string c) {
-        SymbolEntry *e = scopes.back().lookup(c);
+    SymbolEntry *lookupCurentScope(std::string c, TableType l) {
+        SymbolEntry *e;
+        if (l == T_VAR)         e = scopes.back().lookupVar(c);
+        else if (l == T_FUNC)   e = scopes.back().lookupFunc(c);
+        else                    e = scopes.back().lookupBoth(c);
         if (e!= nullptr) return e;
         return nullptr;
     }
 
-    void insert(std::string c, TonyType* t){
-        scopes.back().insert(c, t);
+    void insert(std::string c, TonyType* t, TableType l){
+        if (l == T_VAR)       scopes.back().insertVar(c, t);
+        else                  scopes.back().insertFunc(c, t);
     }
-    // This probably doesn't belong here, but works for now
 
     bool hasParentScope(){
         return scopes.size() > 1;
     }
-    void insertIntoParentScope(std::string c, TonyType* t){
-        scopes.at(scopes.size() -2).insert(c, t);
+    void insertIntoParentScope(std::string c, TonyType* t, TableType l){
+        if (l == T_VAR)       scopes.at(scopes.size() -2).insertVar(c, t);
+        else                  scopes.at(scopes.size() -2).insertFunc(c, t);
     }
-    SymbolEntry * lookupParentScope(std::string c){
+
+    SymbolEntry * lookupParentScope(std::string c, TableType l){
         if(hasParentScope()){
-            SymbolEntry *e = scopes.at(scopes.size() -2).lookup(c);
-            if (e!= nullptr) return e;
+            SymbolEntry *e;
+            if (l == T_VAR)         e = scopes.at(scopes.size() -2).lookupVar(c);
+            else if (l == T_FUNC)   e = scopes.at(scopes.size() -2).lookupFunc(c);
+            else                    e = scopes.at(scopes.size() -2).lookupBoth(c);
         }
         return nullptr;
     }
