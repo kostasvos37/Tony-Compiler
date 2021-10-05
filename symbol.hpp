@@ -7,6 +7,7 @@
 #include <iostream>
 #include "type.hpp"
 #include <string>
+#include "llvm/IR/Function.h"
 
 void yyerror(const char *msg, ...);
 
@@ -124,6 +125,8 @@ public:
 private:
     std::vector<Scope> scopes;
 };
+
+extern std::map<std::string, llvm::Function*> GLOBAL_FUNCTIONS;
 
 extern SymbolTable st;
 

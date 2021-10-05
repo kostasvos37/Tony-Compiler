@@ -4,8 +4,10 @@
 #include "ast.hpp"
 #include "lexer.hpp"
 #include "symbol.hpp"
+
 extern FILE *yyin;
 SymbolTable st;
+std::map<std::string, llvm::Function*> GLOBAL_FUNCTIONS;
 %}
 
 %token T_and      "and"

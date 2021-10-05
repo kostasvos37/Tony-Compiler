@@ -62,8 +62,10 @@ public:
     i8 = llvm::IntegerType::get(TheContext, 8);
     i32 = llvm::IntegerType::get(TheContext, 32);
     i64 = llvm::IntegerType::get(TheContext, 64);
+    llvm::Type *proc = llvm::Type::getVoidTy(TheContext);
 
-    //Initialize library functions
+
+    // Initialize library functions
     // We use 'TheMalloc' to allocate memory blocks with LLVM.
     // This is needed currently for creating Tony lists.
     llvm::FunctionType *malloc_type = 
@@ -72,6 +74,12 @@ public:
     TheMalloc = 
       llvm::Function::Create(malloc_type, llvm::Function::ExternalLinkage,
                              "GC_malloc", TheModule.get());
+
+    llvm::FunctionType *writeCharType = llvm::FunctionType::get(
+      proc, std::vector<llvm::Type *>{i8}, false);
+	  GLOBAL_FUNCTIONS[std::string("putc")] = llvm::Function::Create(
+      writeCharType, llvm::Function::ExternalLinkage,
+      "writeChar", TheModule.get());
 
     //Emit Program Code
     compile();
@@ -1259,10 +1267,11 @@ public:
     for (auto i : expressions) i->sem();
   }
 
-  // Not implemented yet
-  virtual llvm::Value *compile() override {
+  // This DOESN'T need to be implemented.
+  virtual llvm::Value* compile() override {
     return nullptr;
-  } 
+  }
+
 private:
   std::vector<Expr*> expressions;
 };
@@ -1307,10 +1316,14 @@ public:
     return false;
   }
 
-  // Not implemented yet
   virtual llvm::Value *compile() override {
-    return nullptr;
-  } 
+    std::vector<llvm::Value*> compiled_params;
+    for (Expr* param : params->get_expr_list()) {
+      compiled_params.push_back(param->compile());
+    }
+    return Builder.CreateCall(GLOBAL_FUNCTIONS[name->getName()],
+                              compiled_params);
+  }
 
   virtual std::string getName() override {
     return name->getName();

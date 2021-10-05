@@ -1,11 +1,10 @@
 def int main():
     int n
+    char b
     n:=0
-    if n < 0:
-        n := 0
-    else:
-        n := 1
-    end
+    b := '4'
+    putc(b)
+    putc('2')
+    putc('\n')
     return n
-
 end
