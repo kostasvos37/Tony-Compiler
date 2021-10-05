@@ -1464,11 +1464,16 @@ public:
   }
 
   virtual void sem() override {
-    st.openScope(header->getType());
-  
+
+    // Global Scope including functions first
+    bool isFirstScope = false;
     if(!st.hasParentScope()){
+      isFirstScope = true;
+      st.openScope(new TonyType(TYPE_void, nullptr));
       initFunctions();
     }
+    st.openScope(header->getType());
+
     header->semHeaderDef();
     for (AST *a : local_definitions) a->sem();
     body->sem();
@@ -1477,6 +1482,11 @@ public:
     }
     //st.printSymbolTable();
     st.closeScope();
+
+    //Closing Global Scope
+    if(isFirstScope) {
+      st.closeScope();
+    }
   }
 
   virtual llvm::Value *compile () override {
