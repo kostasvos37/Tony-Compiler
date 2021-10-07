@@ -1,6 +1,9 @@
-def int temp():
+def main():
     int x, y
-    x := 0
-    y := 4
-    return 1
+    char z
+    bool b
+    
+    z := 'a'
+    
+    putc (chr (97))
 end

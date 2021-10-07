@@ -28,7 +28,7 @@ public:
     }
 
     void addFunc(std::string name, llvm::Function *fun){
-        if (LocalFunctions.find(name) != LocalFunctions.end()) yyerror("Function already declared");
+        if (LocalFunctions.find(name) != LocalFunctions.end()) yyerror("Function %salready defined", name.c_str());
         LocalFunctions[name] = fun;
     }
 

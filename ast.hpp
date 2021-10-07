@@ -46,8 +46,7 @@ public:
   virtual void sem() {}; // NOTE: After we implement `sem()` for all the subclasses
                          // it would make sense to make this: `virtual void sem() = 0`.
   void llvm_compile_and_dump(){
-    // Initialize
-    
+    // Initialize    
     TheModule = std::make_unique<llvm::Module>("tony program", TheContext);
 
     /* TheFPM = make_unique<legacy::FunctionPassManager>(TheModule.get());
@@ -63,7 +62,7 @@ public:
     i8 = llvm::IntegerType::get(TheContext, 8);
     i32 = llvm::IntegerType::get(TheContext, 32);
     i64 = llvm::IntegerType::get(TheContext, 64);
-    llvm::Type *proc = llvm::Type::getVoidTy(TheContext);
+    voidT = llvm::Type::getVoidTy(TheContext);
 
     // Initialize library functions
     // We use 'TheMalloc' to allocate memory blocks with LLVM.
@@ -76,16 +75,13 @@ public:
                              "GC_malloc", TheModule.get());
 
 
+    
     // Global Scope
     rt.openScope();
     
-    llvm::FunctionType *writeCharType = llvm::FunctionType::get(
-      proc, std::vector<llvm::Type *>{i8}, false);
-	  rt.insertFunc("putc",  llvm::Function::Create(writeCharType, llvm::Function::ExternalLinkage, "writeChar", TheModule.get()));
-
-    
-
+    initializeLibraryFunctions();
     // Emit Program Code
+    
     compile();
     
     // Close Program Scope
@@ -102,6 +98,57 @@ public:
     llvm::raw_ostream *out = new llvm::raw_fd_ostream("out.ll", EC);
     TheModule->print(*out, nullptr);
   }
+
+  void initializeLibraryFunctions(){
+    
+    // puti (int n)
+    llvm::FunctionType *writeIntegerType = llvm::FunctionType::get(voidT, std::vector<llvm::Type *>{i32}, false);
+	  rt.insertFunc("puti",  llvm::Function::Create(writeIntegerType, llvm::Function::ExternalLinkage, "writeInteger", TheModule.get()));
+
+    // putc (char c)
+    llvm::FunctionType *writeCharType = llvm::FunctionType::get(voidT, std::vector<llvm::Type *>{i8}, false);
+	  rt.insertFunc("putc",  llvm::Function::Create(writeCharType, llvm::Function::ExternalLinkage, "writeChar", TheModule.get()));
+
+    // putb (bool b)
+    llvm::FunctionType *writeBooleanType = llvm::FunctionType::get(voidT, std::vector<llvm::Type *>{i1}, false);
+	  rt.insertFunc("putb",  llvm::Function::Create(writeBooleanType, llvm::Function::ExternalLinkage, "writeBoolean", TheModule.get()));
+
+    //TODO : puts (char [])
+
+    // int geti ()
+    llvm::FunctionType *getiType = llvm::FunctionType::get(i32, std::vector<llvm::Type *>{}, false);
+	  rt.insertFunc("geti",  llvm::Function::Create(getiType, llvm::Function::ExternalLinkage, "readInteger", TheModule.get()));
+    
+    // char getc()
+    llvm::FunctionType *getcType = llvm::FunctionType::get(i8, std::vector<llvm::Type *>{}, false);
+	  rt.insertFunc("getc",  llvm::Function::Create(getcType, llvm::Function::ExternalLinkage, "readChar", TheModule.get()));
+    
+    // bool getb ()
+    llvm::FunctionType *getbType = llvm::FunctionType::get(i1, std::vector<llvm::Type *>{}, false);
+	  rt.insertFunc("getb",  llvm::Function::Create(getbType, llvm::Function::ExternalLinkage, "readBoolean", TheModule.get()));
+
+    //TODO char [] gets ()
+
+    // int abs (int n)
+    llvm::FunctionType *abstype = llvm::FunctionType::get(i32, std::vector<llvm::Type *>{i32}, false);
+	  rt.insertFunc("abs",  llvm::Function::Create(abstype, llvm::Function::ExternalLinkage, "abs", TheModule.get()));
+
+    // int ord(char c)
+    llvm::FunctionType *ordtype = llvm::FunctionType::get(i32, std::vector<llvm::Type *>{i8}, false);
+	  rt.insertFunc("ord",  llvm::Function::Create(ordtype, llvm::Function::ExternalLinkage, "ord", TheModule.get()));
+
+    //char chr (int n)
+    llvm::FunctionType *chrtype = llvm::FunctionType::get(i8, std::vector<llvm::Type *>{i32}, false);
+	  rt.insertFunc("chr",  llvm::Function::Create(chrtype, llvm::Function::ExternalLinkage, "chr", TheModule.get()));
+
+
+
+    //TODO: int strlen (char [] s)
+    //TODO: int strcmp (char[] s1, s2)
+    //TODO: strcpy (char[] trg, src)
+    //TODO: strcat (char[] trg, src)
+  
+  }
   
   virtual llvm::Value *compile() = 0;
 protected:
@@ -116,6 +163,7 @@ protected:
   static llvm::Type *i8;
   static llvm::Type *i32;
   static llvm::Type *i64;
+  static llvm::Type *voidT;
     
   static llvm::ConstantInt* c1(bool b) {
     if(b) return llvm::ConstantInt::getTrue(TheContext);
@@ -138,6 +186,8 @@ protected:
       case TYPE_int: return i32;
       case TYPE_bool: return i1;
       case TYPE_char: return i8;
+      case TYPE_void: return voidT;
+
       default: yyerror("Type conversion not implemented yet");
       return nullptr;
     }
@@ -838,7 +888,7 @@ public:
     for (auto i: args){
       ArgumentTypes.push_back(convertType(i));
     }
-    llvm::FunctionType *FT = llvm::FunctionType::get(i32, ArgumentTypes, false);
+    llvm::FunctionType *FT = llvm::FunctionType::get(convertType(type), ArgumentTypes, false);
     llvm::Function *F = llvm::Function::Create(FT, llvm::Function::ExternalLinkage, 
       name, TheModule.get());
     
@@ -1323,8 +1373,10 @@ public:
 
   virtual llvm::Value *compile() override {
     std::vector<llvm::Value*> compiled_params;
-    for (Expr* param : params->get_expr_list()) {
-      compiled_params.push_back(param->compile());
+    if(hasParams){
+      for (Expr* param : params->get_expr_list()) {
+        compiled_params.push_back(param->compile());
+      }   
     }
     return Builder.CreateCall(rt.lookupFunc(name->getName()), compiled_params);
   }
@@ -1353,6 +1405,8 @@ public:
 
   // Not implemented yet
   virtual llvm::Value *compile() override {
+
+    //llvm::Function *fun = header->compile();
     return nullptr;
   } 
 
