@@ -26,8 +26,19 @@ public:
         if (LocalVariables.find(c) == LocalVariables.end()) {return nullptr;}
         return &LocalVariables[c];
     }
+
+    void addFunc(std::string name, llvm::Function *fun){
+        if (LocalFunctions.find(name) != LocalFunctions.end()) yyerror("Function already declared");
+        LocalFunctions[name] = fun;
+    }
+
+    llvm::Function *lookupFunc(std::string c) {
+        if (LocalFunctions.find(c) == LocalFunctions.end()) {return nullptr;}
+        return LocalFunctions[c];
+    }
 private:
     std::map<std::string, ValueEntry> LocalVariables;
+    std::map<std::string, llvm::Function *> LocalFunctions;
 };
 
 class RuntimeTable {
@@ -42,8 +53,20 @@ public:
         return nullptr;
     }
 
-    void insert(std::string c, llvm::Type* t, llvm::Value *Val, llvm::AllocaInst * Alloca){
+    void insertVar(std::string c, llvm::Type* t, llvm::Value *Val, llvm::AllocaInst * Alloca){
         scopes.back().addVariable(c, t, Val, Alloca);
+    }
+
+    llvm::Function *lookupFunc(std::string c) {
+        for (auto i = scopes.rbegin(); i!= scopes.rend(); i++){
+            llvm::Function *e = i->lookupFunc(c);
+            if (e!= nullptr) return e;
+        }
+        return nullptr;
+    }
+
+    void insertFunc(std::string c, llvm::Function* fun){
+        scopes.back().addFunc(c, fun);
     }
 
     void openScope(){
@@ -54,8 +77,16 @@ public:
         scopes.pop_back();
     }
 
+    void setCurrentFunction(llvm::Function *fun){
+        function = fun;
+    }
+
+    llvm::Function *getCurrentFunction(){
+        return function;
+    }
+
 private:
-    //llvm::Function *function;
+    llvm::Function *function;
     std::vector<RuntimeScope> scopes;
 };
 

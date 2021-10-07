@@ -75,14 +75,22 @@ public:
       llvm::Function::Create(malloc_type, llvm::Function::ExternalLinkage,
                              "GC_malloc", TheModule.get());
 
+
+    // Global Scope
+    rt.openScope();
+    
     llvm::FunctionType *writeCharType = llvm::FunctionType::get(
       proc, std::vector<llvm::Type *>{i8}, false);
-	  GLOBAL_FUNCTIONS[std::string("putc")] = llvm::Function::Create(
-      writeCharType, llvm::Function::ExternalLinkage,
-      "writeChar", TheModule.get());
+	  rt.insertFunc("putc",  llvm::Function::Create(writeCharType, llvm::Function::ExternalLinkage, "writeChar", TheModule.get()));
 
-    //Emit Program Code
+    
+
+    // Emit Program Code
     compile();
+    
+    // Close Program Scope
+    rt.closeScope();
+
     bool bad = llvm::verifyModule(*TheModule, &llvm::errs());
     if (bad){
       std::cerr << "The IR is bad!\n";
@@ -601,7 +609,7 @@ public:
   virtual llvm::Value *compile() override {
     for (Id * id: ids){
       llvm::AllocaInst * Alloca = Builder.CreateAlloca(convertType(type), 0, id->getName());
-      rt.insert(id->getName(), convertType(type), Alloca, Alloca);
+      rt.insertVar(id->getName(), convertType(type), Alloca, Alloca);
     }
     return nullptr;
   } 
@@ -1318,8 +1326,7 @@ public:
     for (Expr* param : params->get_expr_list()) {
       compiled_params.push_back(param->compile());
     }
-    return Builder.CreateCall(GLOBAL_FUNCTIONS[name->getName()],
-                              compiled_params);
+    return Builder.CreateCall(rt.lookupFunc(name->getName()), compiled_params);
   }
 
   virtual std::string getName() override {
@@ -1493,7 +1500,8 @@ public:
     
     // Create the function based on header
     llvm::Function *fun = header->compile();
-    
+    rt.setCurrentFunction(fun);
+
     //Create Basic block
     llvm::BasicBlock *BB = llvm::BasicBlock::Create(TheContext, "entry", fun);
     Builder.SetInsertPoint(BB);    
@@ -1502,7 +1510,7 @@ public:
     for (auto &arg: fun->args()) {
       llvm::AllocaInst * Alloca = CreateEntryBlockAlloca(fun, arg.getName().str(), arg.getType());
       Builder.CreateStore(&arg, Alloca);
-      rt.insert(arg.getName().str(), arg.getType(), Alloca, Alloca);
+      rt.insertVar(arg.getName().str(), arg.getType(), Alloca, Alloca);
     }
 
     for(AST *a: local_definitions) a->compile();
