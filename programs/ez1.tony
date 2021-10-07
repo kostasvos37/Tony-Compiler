@@ -1,10 +1,6 @@
-def int main():
-    int n
-    char b
-    n:=0
-    b := '4'
-    putc(b)
-    putc('2')
-    putc('\n')
-    return n
+def int temp():
+    int x, y
+    x := 0
+    y := 4
+    return 1
 end

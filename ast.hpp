@@ -10,6 +10,7 @@
 #include <string>
 #include <algorithm>
 #include "symbol.hpp"
+#include "runtime.hpp"
 #include "type.hpp"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
@@ -64,7 +65,6 @@ public:
     i64 = llvm::IntegerType::get(TheContext, 64);
     llvm::Type *proc = llvm::Type::getVoidTy(TheContext);
 
-
     // Initialize library functions
     // We use 'TheMalloc' to allocate memory blocks with LLVM.
     // This is needed currently for creating Tony lists.
@@ -103,14 +103,12 @@ protected:
   static llvm::GlobalVariable *TheVars;
   static std::unique_ptr<llvm::Module> TheModule;
   static llvm::Function *TheMalloc;
-  static std::map<std::string, llvm::AllocaInst*> NamedValues;
 
   static llvm::Type *i1;
   static llvm::Type *i8;
   static llvm::Type *i32;
   static llvm::Type *i64;
-  
-
+    
   static llvm::ConstantInt* c1(bool b) {
     if(b) return llvm::ConstantInt::getTrue(TheContext);
     else return llvm::ConstantInt::getFalse(TheContext);
@@ -223,7 +221,7 @@ public:
 
   // Not implemented yet
   virtual llvm::Value *compile() override {
-    llvm::Value *V = NamedValues[var];
+    llvm::Value *V = rt.lookup(var)->varValue;
     if(!V)
       yyerror("Variable not Found");
     return Builder.CreateLoad(V, var.c_str());
@@ -352,7 +350,6 @@ public:
       yyerror("Array index not an integer.");
     }
     type = new TonyType(TYPE_array, type_of_elems);
-    
   }
 
   // Not implemented yet
@@ -604,7 +601,7 @@ public:
   virtual llvm::Value *compile() override {
     for (Id * id: ids){
       llvm::AllocaInst * Alloca = Builder.CreateAlloca(convertType(type), 0, id->getName());
-      NamedValues[id->getName()] = Alloca;
+      rt.insert(id->getName(), convertType(type), Alloca, Alloca);
     }
     return nullptr;
   } 
@@ -957,7 +954,7 @@ public:
       yyerror("Atom is not a valid l-value.");
     }
 
-    llvm::Value *Variable = NamedValues[atom->getName()];
+    llvm::Value *Variable = rt.lookup(atom->getName())->varValue;
     Builder.CreateStore(Val, Variable);
     return Val;
   } 
@@ -1491,6 +1488,9 @@ public:
 
   virtual llvm::Value *compile () override {
     
+    //Open Function scope, TODO: add the function itself;
+    rt.openScope();
+    
     // Create the function based on header
     llvm::Function *fun = header->compile();
     
@@ -1499,24 +1499,20 @@ public:
     Builder.SetInsertPoint(BB);    
     
     //Insert values into table
-    NamedValues.clear();
     for (auto &arg: fun->args()) {
       llvm::AllocaInst * Alloca = CreateEntryBlockAlloca(fun, arg.getName().str(), arg.getType());
-
       Builder.CreateStore(&arg, Alloca);
-      NamedValues[arg.getName().str()] = Alloca;
+      rt.insert(arg.getName().str(), arg.getType(), Alloca, Alloca);
     }
+
     for(AST *a: local_definitions) a->compile();
     body->compile();
     if(!header->getIsTyped())
       Builder.CreateRet(nullptr);
     
+    rt.closeScope();
     return nullptr;
   } 
-
-
-
-
 private:
   Header *header;
   StmtBody *body;

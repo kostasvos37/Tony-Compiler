@@ -7,6 +7,8 @@
 
 extern FILE *yyin;
 SymbolTable st;
+RuntimeTable rt;
+
 std::map<std::string, llvm::Function*> GLOBAL_FUNCTIONS;
 %}
 
