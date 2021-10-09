@@ -1284,7 +1284,30 @@ public:
     initializations->compile();
 
     // Creating new BB for header after current block
-    //llvm::Function *TheFunction = Builder.GetInsertBlock()->getParent();
+    llvm::Function *TheFunction = Builder.GetInsertBlock()->getParent();
+    llvm::BasicBlock *LoopBB = llvm::BasicBlock::Create(TheContext, "loop", TheFunction);
+    llvm::BasicBlock *AfterBB = llvm::BasicBlock::Create(TheContext, "afterloop");
+
+    //Check condition before starting loop
+    llvm::Value *cond = condition->compile();
+    cond = Builder.CreateICmpNE(cond, c1(0), "loopcond");    
+    Builder.CreateCondBr(cond, LoopBB, AfterBB);
+
+
+    // LoopBB : compiling steps and checking condition  
+    Builder.SetInsertPoint(LoopBB);
+    stmt_body->compile();
+    
+    steps->compile();
+
+    cond = condition->compile();
+    cond = Builder.CreateICmpNE(cond, c1(0), "loopcond");    
+    Builder.CreateCondBr(cond, LoopBB, AfterBB);
+  
+    //Emit Merge Block
+    TheFunction->getBasicBlockList().push_back(AfterBB);
+    Builder.SetInsertPoint(AfterBB);
+    
     return nullptr;
   } 
 
