@@ -1284,13 +1284,13 @@ public:
     initializations->compile();
 
     // Creating new BB for header after current block
-    Function *TheFunction = Builder.GetInsertBlock()->getParent();
+    //llvm::Function *TheFunction = Builder.GetInsertBlock()->getParent();
     return nullptr;
   } 
 
 private:
   SimpleList *initializations;
-  Expr *expr;
+  Expr *condition;
   SimpleList *steps;
   StmtBody *stmt_body;
 };
