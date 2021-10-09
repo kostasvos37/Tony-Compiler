@@ -65,6 +65,7 @@ public:
         }
         default: yyerror("Cannot have that type in a list.");
       }
+      return std::string("error");
     }
 
     std::vector<TonyType *> get_function_args (){

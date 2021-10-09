@@ -229,6 +229,7 @@ protected:
       }
       default: yyerror("Type conversion not implemented yet");
     }
+    return nullptr;
   }
 
   static llvm::AllocaInst *CreateEntryBlockAlloca (llvm::Function *TheFunction, const std::string &VarName, llvm::Type* Ty){
@@ -1130,189 +1131,88 @@ public:
   void sem() override {}
 };
 
-class Elsif: public Stmt {
-public:
-  Elsif() {}
-  ~Elsif() {
-    for (Expr* e: elsif_conds) delete e;
-    for (StmtBody* s: elsif_stmt_bodies) delete s;
-  }
-  std::vector<Expr *> get_conds() {
-    return elsif_conds;
-  }
-  std::vector<StmtBody *> get_stmt_bodies() {
-    return elsif_stmt_bodies;
-  }
-
-  void clear(){
-    elsif_conds.clear();
-    elsif_stmt_bodies.clear();
-  }
-
-  bool isEmpty(){
-    return elsif_conds.empty();
-  }
-  void append(Expr* e, StmtBody* s) {
-    elsif_conds.push_back(e);
-    elsif_stmt_bodies.push_back(s);
-  }
-
-    virtual void printOn(std::ostream &out) const override {
-    // This is never used
-    out << "<Elsif> </Elsif>";
-  }
-  virtual void sem() override {}
-  // Not implemented yet
-  virtual llvm::Value *compile() override {
-    return nullptr;
-  } 
-
-private:
-  std::vector<Expr *> elsif_conds;
-  std::vector<StmtBody *> elsif_stmt_bodies;
-};
-
-class Else: public Stmt {
-public:
-  Else() {}
-  Else(StmtBody *s){else_stmt.push_back(s);}
-  ~Else() {
-    if (else_stmt.empty()){
-      delete else_stmt[0];
-    }
-  }
-  StmtBody * get_stmt() {
-    return else_stmt[0]; 
-  }
-
-  void clear(){
-    else_stmt.clear();
-  }
-
-  bool isEmpty(){
-    return else_stmt.empty();
-  }
-
-  // This is never used, only for testing
-  virtual void printOn(std::ostream &out) const override {
-    if(!else_stmt.empty()){
-      out << "\n<Else>\n" << *else_stmt[0] << "\n</Else>\n";
-    }
-  }
-
-  virtual void sem() override {}
-  // Not implemented yet
-  virtual llvm::Value *compile() override {
-    return nullptr;
-  } 
-
-private:
-  std::vector<StmtBody *> else_stmt;
-};
 
 class If: public Stmt {
 public:
-  If(Expr *if_condition, StmtBody *if_stmt_body, Elsif *elsif_stmt, Else *else_stmt){
-    conditions.push_back(if_condition);
-    statements.push_back(if_stmt_body);
-    
-    // TODO: There might exist a more efficient way to do this.
-    std::vector<Expr *> elsif_conds = elsif_stmt->get_conds();
-    std::vector<StmtBody *> elsif_stmt_bodies = elsif_stmt->get_stmt_bodies();
-    for(int i=0; i < (int) elsif_conds.size(); i++){
-      conditions.push_back(elsif_conds[i]);
-      statements.push_back(elsif_stmt_bodies[i]);
-    }
-
-    if(!else_stmt->isEmpty()) {
-      conditions.push_back(new Boolean("true"));
-      statements.push_back(else_stmt->get_stmt());
-      hasElse=true;
-    }
-  }
+  If(Expr *if_condition, StmtBody *if_stmt_body, If* next): condition(if_condition), statement(if_stmt_body), nextIf(next) {}
   ~If() {
-    for (Expr* e: conditions) delete e;
-    for (StmtBody* s: statements) delete s; 
+    delete condition;
+    delete statement; 
+    if(nextIf != nullptr) delete nextIf;
   }
 
   virtual void printOn(std::ostream &out) const override {
-    out << "\n<If>\n";
-    out << *conditions[0] << *statements[0];
-
-    int size = (int) conditions.size();
-
-    if(hasElse) {
-      for (int i=1; i<(size-1); i++) {
-        out << "\n<ElsIf>\n" << *conditions[i] << *statements[i] << "\n</ElsIf>\n";
-      }
-      out << "\n<Else>\n" << *conditions[size-1] << *statements[size-1] << "\n</Else>\n";
-    } else {
-      for (int i=1; i<size; i++) {
-        out << "\n<ElsIf>\n" << *conditions[i] << *statements[i] << "\n</ElsIf>\n";
-      }
-    }
+    out << "\n<If>\n"; 
+    if (condition != nullptr) out << *condition;
+    out << *statement;
+    if (nextIf != nullptr) out << *nextIf;
     out << "\n</If>\n";
   }
 
   virtual void sem() override {
-    // TonyType-check all conditions and call `sem()` for all statements.
-    for(int i=0; i<(int) conditions.size(); i++) {
-      if(!conditions[i]->type_check(TYPE_bool)) {
+
+    if(condition != nullptr && !condition->type_check(TYPE_bool)) {
         yyerror("TonyType mismatch. 'If-condition' is not boolean.");
       }
-      statements[i]->sem();
-    }
+    statement->sem();
+    if(nextIf != nullptr) nextIf->sem();
   }
 
   // Not implemented yet
   virtual llvm::Value *compile() override {
-    llvm::Value *cond = conditions[0]->compile();
+    
+    // Last Else Block
+    if(condition == nullptr && statement != nullptr){
+      statement->compile();
+      return nullptr;
+    }
+    llvm::Value *cond = condition->compile();
     if(!cond) return nullptr;
-
+  
     //Convert Condition to bool
-
     cond = Builder.CreateICmpNE(cond, c1(0), "ifcond");
+    
 
     llvm::Function *TheFunction = Builder.GetInsertBlock()->getParent();
 
     //Create Basic Blocks
     llvm::BasicBlock *ThenBB = llvm::BasicBlock::Create(TheContext, "then", TheFunction);
-    llvm::BasicBlock *ElseBB = llvm::BasicBlock::Create(TheContext, "else");
+    llvm::BasicBlock *ElseBB = llvm::BasicBlock::Create(TheContext, "else"); 
     llvm::BasicBlock *MergeBB= llvm::BasicBlock::Create(TheContext, "ifcont");
 
     Builder.CreateCondBr(cond, ThenBB, ElseBB);
-
+    
+    // Then Statement  
     Builder.SetInsertPoint(ThenBB);
-
-    // Then Statement
-    statements[0]->compile();
+    statement->compile();
     
     Builder.CreateBr(MergeBB);
     ThenBB = Builder.GetInsertBlock();
+        
+  
     // Emit else block
     TheFunction->getBasicBlockList().push_back(ElseBB);
     
     Builder.SetInsertPoint(ElseBB);
 
-    //Else statement
-    statements[1]->compile();
-
+    if(nextIf != nullptr)
+      nextIf->compile();
+    
     Builder.CreateBr(MergeBB);
-
     //Update current block, code for else can change it
     ElseBB = Builder.GetInsertBlock();
-    
+
     //Emit Merge Block
     TheFunction->getBasicBlockList().push_back(MergeBB);
     Builder.SetInsertPoint(MergeBB);
-
     return nullptr;
   } 
 
+
 private:
-  std::vector<Expr *>     conditions;
-  std::vector<StmtBody *> statements;
-  bool hasElse = false;
+  Expr *     condition;
+  StmtBody * statement;
+  If *nextIf;
 };
 
 class SimpleList: public AST {
@@ -1345,6 +1245,9 @@ public:
 
   // Not implemented yet
   virtual llvm::Value *compile() override {
+    for (auto s: simples){
+      s->compile();
+    }
     return nullptr;
   } 
 private:
@@ -1354,37 +1257,41 @@ private:
 class For: public Stmt {
 public:
   For(SimpleList *sl1, Expr *e, SimpleList *sl2, StmtBody *sb):
-    simple_list_1(sl1), expr(e), simple_list_2(sl2), stmt_body(sb) {}
+    initializations(sl1), condition(e), steps(sl2), stmt_body(sb) {}
   ~For() {
-    delete simple_list_1;
-    delete expr;
-    delete simple_list_2;
+    delete initializations;
+    delete condition;
+    delete steps;
     delete stmt_body;
   }
 
   virtual void printOn(std::ostream &out) const override {
-    out << "\n<For>\n" << *simple_list_1 << *expr << *simple_list_2  << *stmt_body << "\n</For>\n";
+    out << "\n<For>\n" << *initializations << *condition << *steps  << *stmt_body << "\n</For>\n";
   }
 
   virtual void sem() override {
-    simple_list_1->sem();
-    expr->sem();
-    if(expr->get_type()->get_current_type() != TYPE_bool){
+    initializations->sem();
+    condition->sem();
+    if(condition->get_type()->get_current_type() != TYPE_bool){
       yyerror("For condition is not boolean.");
     }
-    simple_list_2->sem();
+    steps->sem();
     stmt_body->sem();
   }
 
   // Not implemented yet
   virtual llvm::Value *compile() override {
+    initializations->compile();
+
+    // Creating new BB for header after current block
+    Function *TheFunction = Builder.GetInsertBlock()->getParent();
     return nullptr;
   } 
 
 private:
-  SimpleList *simple_list_1;
+  SimpleList *initializations;
   Expr *expr;
-  SimpleList *simple_list_2;
+  SimpleList *steps;
   StmtBody *stmt_body;
 };
 

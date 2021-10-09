@@ -73,8 +73,6 @@ std::map<std::string, llvm::Function*> GLOBAL_FUNCTIONS;
     Header *header;
     FunctionDeclaration *funcdecl;
     FunctionDefinition *funcdef;
-    Elsif *elsif;
-    Else *els;
     If *iff;
     For *fo;
  }
@@ -94,8 +92,8 @@ std::map<std::string, llvm::Function*> GLOBAL_FUNCTIONS;
 %type<type> Type
 %type<stmtbody> Stmt_Body Stmt_Full
 %type<iff> If_Clause
-%type<elsif> Elsif_Clause
-%type<els> Else_Clause
+%type<iff> Elsif_Clause
+%type<iff> Else_Clause
 %type<fo> For_Clause
 %type<stmt> Stmt  
 %type<simple> Simple
@@ -112,11 +110,12 @@ std::map<std::string, llvm::Function*> GLOBAL_FUNCTIONS;
 
 Program:
     Func_def {
+        //std::cout << *$1;
         $1->sem();
         std::cout << "Semantic analysis done!\n";
         $1->llvm_compile_and_dump();
         delete $1;
-        //std::cout << *$1;
+        
     }
 ;
 
@@ -187,17 +186,17 @@ Stmt_Full:
 ; 
 
 If_Clause:
-    "if" Expr ':' Stmt_Body Elsif_Clause Else_Clause "end" {$$ = new If($2, $4, $5, $6);}
+    "if" Expr ':' Stmt_Body Elsif_Clause "end" {$$ = new If($2, $4, $5);}
 ;
 
 Elsif_Clause: 
-    "elsif" Expr ':' Stmt_Body Elsif_Clause {$5->append($2, $4); $$ = $5;}
-|   /*e*/                                   {$$ = new Elsif();}
+    "elsif" Expr ':' Stmt_Body Elsif_Clause {$$ = new If($2, $4, $5);}
+|   Else_Clause                             {$$ = $1;}
 ;
 
 Else_Clause:  
-    "else" ':' Stmt_Body {$$ = new Else($3);}
-|   /*e*/                {$$ = new Else();}
+    "else" ':' Stmt_Body {$$ = new If(nullptr, $3, nullptr);}
+|   /*e*/                {$$ = nullptr;}
 ;
 
 For_Clause: 
