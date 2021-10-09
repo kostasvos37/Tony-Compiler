@@ -1,0 +1,6 @@
+def main():
+  int x
+  x := 5 + 5 + 5
+  putc('4')
+  putc('2')
+end

@@ -1,4 +1,0 @@
-def return_tail():
-  int x
-  x := tail(nil)
-end

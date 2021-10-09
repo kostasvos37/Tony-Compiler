@@ -10,4 +10,6 @@ def main():
     else:
         skip
     end
+    putc('4')
+    putc('2')
 end

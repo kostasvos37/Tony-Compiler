@@ -1,6 +1,0 @@
-def return_tail():
-  list[int] x
-  bool y
-  x := nil
-  y := nil? (x)
-end

@@ -1,0 +1,8 @@
+def main():
+  list[int] x
+  bool y
+  x := nil
+  y := nil?(x)
+  putc('4')
+  putc('2')
+end

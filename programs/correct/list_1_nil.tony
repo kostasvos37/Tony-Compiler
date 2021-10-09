@@ -32,7 +32,8 @@ def main():
     putc('h')
   end
 
-  % This program should print this only.
-  putc('i')
+  % This program should print 42 only...
+  putc('4')
+  putc('2')
 
 end

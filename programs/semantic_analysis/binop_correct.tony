@@ -1,4 +1,0 @@
-def add():
-  int x
-  x := 5 + 5 + 5
-end

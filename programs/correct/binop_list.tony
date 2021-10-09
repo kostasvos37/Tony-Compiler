@@ -1,5 +1,7 @@
-def add():
+def main():
   int x
   list[int] y
   y := x # x # (x+1) # nil
+  putc('4')
+  putc('2')
 end

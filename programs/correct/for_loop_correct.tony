@@ -3,4 +3,6 @@ def main():
     for i:=0; i<10; i:=i+1:
         skip
     end
+    putc('4')
+    putc('2')
 end

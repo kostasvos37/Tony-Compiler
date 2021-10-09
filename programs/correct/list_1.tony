@@ -1,6 +1,6 @@
 def main():
     list [char] x
-    x := '2' # '3' # nil
+    x := '4' # '2' # nil
     putc(head(x))
     putc(head(tail(x)))
 end

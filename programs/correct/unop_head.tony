@@ -1,6 +1,8 @@
-def return_head():
+def main():
   int x
   list[int] y
   y := x # x # (x+1) # nil
   x := head(y)
+  putc('4')
+  putc('2')
 end
