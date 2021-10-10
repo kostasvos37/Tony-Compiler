@@ -284,6 +284,12 @@ class Atom: public Expr {
 public:
   virtual bool isLvalue() {return false;}
   virtual std::string getName() = 0;
+  virtual bool isArrayElement() {return false;}
+  virtual void setPassByValue(bool b) {
+    pass_by_value=b;
+  }
+protected:
+  bool pass_by_value;
 };
 
 class Simple: public Stmt {  
@@ -340,8 +346,11 @@ private:
 
 class ArrayElement: public Atom {
 public:
-  ArrayElement(Atom *a, Expr *e): atom(a), expr(e) {}
+  ArrayElement(Atom *a, Expr *e): atom(a), expr(e) {
+    pass_by_value=true;
+  }
   ~ArrayElement() {delete atom; delete expr;}
+  bool isArrayElement() override {return true;}
   virtual void printOn(std::ostream &out) const override {
     out << "\n<ArrayElement>\n" << *atom << "\n" << *expr << "\n</ArrayElement>\n";
   }
@@ -368,15 +377,17 @@ public:
 
   virtual llvm::Value *compile() override {
     llvm::Value* array_index = expr->compile();
-    llvm::Value* variable = rt.lookup(getName())->varValue;
-    if(!variable) yyerror("Variable not Found");
-    llvm::Type*  LLVMType = rt.lookup(getName())->varType;
-    llvm::Value* array_address =
-      Builder.CreateLoad(variable, getName().c_str());
-    array_address =
-      Builder.CreateBitCast(array_address, LLVMType, "array");
-    llvm::Value* elem_ptr = Builder.CreateGEP(array_address, array_index);
-    //return Builder.CreateLoad(elem_ptr, "elem");
+    llvm::Value* v = rt.lookup(getName())->varValue;
+    if(!v) yyerror("Array not Found");
+    llvm::Value* array =
+      Builder.CreateLoad(v, getName().c_str());
+    llvm::Value* elem_ptr = Builder.CreateGEP(array, array_index);
+    if (pass_by_value) {
+      
+      // In this case, the ArrayElement is NOT used on the left side
+      // of an assignment.
+      return Builder.CreateLoad(elem_ptr, "elem");
+    }
     return elem_ptr;
   } 
 private:
@@ -468,7 +479,8 @@ public:
   virtual llvm::Value *compile() override {
     llvm::Value* e = expr->compile();
     llvm::Value* size =
-      Builder.CreateMul(e, c32(type_of_elems->get_data_size_of_type()), "size");
+      Builder.CreateMul(e, c32(type_of_elems->get_data_size_of_type()),
+                        "sizeformalloc");
     llvm::Value* p =
       Builder.CreateCall(TheMalloc, {size}, "arrayaddr");
     return p;
@@ -592,7 +604,7 @@ public:
 
       // 8 bytes are used for the pointer to the next element
       int size = left->get_type()->get_data_size_of_type() + 8;
-      llvm::Value *p = Builder.CreateCall(TheMalloc, {c64(size)}, "newtmp");
+      llvm::Value *p = Builder.CreateCall(TheMalloc, {c32(size)}, "newtmp");
       llvm::Value *n = Builder.CreateBitCast(p, LLVMType, "nodetmp");
       llvm::Value *h = Builder.CreateStructGEP(n, 0, "headptr");
       l = Builder.CreateBitCast(l, LLVMTypeOfElement);
@@ -1103,20 +1115,20 @@ public:
   }
 
   virtual llvm::Value* compile() override {
-    llvm::Type* LLVMType = rt.lookup(atom->getName())->varType;
-
-    // TODO: Check if this is needed. I think it isn't anymore.
-    if (is_nil_constant(expr->get_type())) {
-      // `nil` expressions need to know their type during their 'compile'.
-      expr->setLLVMType(LLVMType);
-    }
+    llvm::Type* LLVMType = getOrCreateLLVMTypeFromTonyType(atom->get_type());
     llvm::Value* value = expr->compile();
+    llvm::Value* variable;
 
-    if(!atom->isLvalue()) {
-      yyerror("Atom is not a valid l-value.");
-    }
-    llvm::Value *variable;
-    if (atom->get_type()->get_current_type() == xxxTYPE_array_element) {
+    // As opposed to variables, the address of an array ELEMENT cannot be
+    // known beforehand (by looking at the RuntimeTable). So, we run
+    // `ArrayElement.compile()` instead of just doing a lookup in the table.
+    if (atom->isArrayElement()) {
+
+      // This will inform `ArrayElement.compile()` to return the address of
+      // the element, not the actual value inside the element. This is
+      // because we want to STORE the value of the right expression into
+      // this element.
+      atom->setPassByValue(false);
       variable = atom->compile();
     } else {
       variable = rt.lookup(atom->getName())->varValue;
