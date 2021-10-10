@@ -68,7 +68,7 @@ public:
     // This is needed currently for creating Tony lists.
     llvm::FunctionType *malloc_type = 
       llvm::FunctionType::get(llvm::PointerType::get(i8, 0),
-                              {i64}, false);
+                              {i32}, false);
     TheMalloc = 
       llvm::Function::Create(malloc_type, llvm::Function::ExternalLinkage,
                              "GC_malloc", TheModule.get());
@@ -178,18 +178,6 @@ protected:
     return llvm::ConstantInt::get(TheContext, llvm::APInt(64, n, true));
   }
 
-  static llvm::Type* convertType(TonyType *t) {
-    switch(t->get_current_type()){
-      case TYPE_int: return i32;
-      case TYPE_bool: return i1;
-      case TYPE_char: return i8;
-      case TYPE_void: return voidT;
-
-      default: yyerror("Type conversion not implemented yet");
-      return nullptr;
-    }
-  }
-
   /*
    * This function creates a pointer to the LLVM type that corresponds
    * to a TonyType. For the case of simple expressions, like integers,
@@ -227,6 +215,18 @@ protected:
           list_type = pointer_to_node_type;
         }
         return list_type;
+      }
+      case TYPE_array: {
+        llvm::Type* element_type =
+          getOrCreateLLVMTypeFromTonyType(t->get_nested_type());
+        if (t->get_array_size() == 0) {
+          llvm::PointerType* array_type =
+            llvm::PointerType::get(element_type, 0);
+          return array_type;
+        }
+        llvm::ArrayType* array_type =
+          llvm::ArrayType::get(element_type, t->get_array_size());
+        return array_type;
       }
       default: yyerror("Type conversion not implemented yet");
     }
@@ -352,7 +352,7 @@ public:
     }
     expr->sem();
     if(expr->get_type()->get_current_type() != TYPE_int){
-      yyerror("Expected expression to be of type integer, as an index to an array");
+      yyerror("Index of an array must be an integer.");
   }
 
   type = atom->get_type()->get_nested_type();
@@ -366,9 +366,18 @@ public:
     return atom->getName();
   }
 
-  // Not implemented yet
   virtual llvm::Value *compile() override {
-    return nullptr;
+    llvm::Value* array_index = expr->compile();
+    llvm::Value* variable = rt.lookup(getName())->varValue;
+    if(!variable) yyerror("Variable not Found");
+    llvm::Type*  LLVMType = rt.lookup(getName())->varType;
+    llvm::Value* array_address =
+      Builder.CreateLoad(variable, getName().c_str());
+    array_address =
+      Builder.CreateBitCast(array_address, LLVMType, "array");
+    llvm::Value* elem_ptr = Builder.CreateGEP(array_address, array_index);
+    //return Builder.CreateLoad(elem_ptr, "elem");
+    return elem_ptr;
   } 
 private:
   Atom *atom;
@@ -451,14 +460,18 @@ public:
   virtual void sem() override {
     expr->sem();
     if(expr->get_type()->get_current_type() != TYPE_int){
-      yyerror("Array index not an integer.");
+      yyerror("Array size must be an integer.");
     }
     type = new TonyType(TYPE_array, type_of_elems);
   }
 
-  // Not implemented yet
   virtual llvm::Value *compile() override {
-    return nullptr;
+    llvm::Value* e = expr->compile();
+    llvm::Value* size =
+      Builder.CreateMul(e, c32(type_of_elems->get_data_size_of_type()), "size");
+    llvm::Value* p =
+      Builder.CreateCall(TheMalloc, {size}, "arrayaddr");
+    return p;
   } 
 private:
   TonyType *type_of_elems;
@@ -658,7 +671,6 @@ public:
     }
   }
 
-  // TODO: Add logic for lists
   virtual llvm::Value *compile() override {
     llvm::Value *r = right->compile();
 
@@ -746,7 +758,7 @@ public:
       rt.insertVar(id->getName(), t, alloca, alloca);
     }
     return nullptr;
-  } 
+  }
 
   std::pair<TonyType*, int> getArgs(){
     std::pair<TonyType*, int> p1;
@@ -1093,16 +1105,22 @@ public:
   virtual llvm::Value* compile() override {
     llvm::Type* LLVMType = rt.lookup(atom->getName())->varType;
 
+    // TODO: Check if this is needed. I think it isn't anymore.
     if (is_nil_constant(expr->get_type())) {
       // `nil` expressions need to know their type during their 'compile'.
       expr->setLLVMType(LLVMType);
     }
     llvm::Value* value = expr->compile();
 
-    if(!atom->isLvalue()){
+    if(!atom->isLvalue()) {
       yyerror("Atom is not a valid l-value.");
     }
-    llvm::Value *variable = rt.lookup(atom->getName())->varValue;
+    llvm::Value *variable;
+    if (atom->get_type()->get_current_type() == xxxTYPE_array_element) {
+      variable = atom->compile();
+    } else {
+      variable = rt.lookup(atom->getName())->varValue;
+    }
     value = Builder.CreateBitCast(value, LLVMType);
     Builder.CreateStore(value, variable);
     return nullptr;

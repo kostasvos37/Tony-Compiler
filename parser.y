@@ -164,7 +164,7 @@ Type:
     "int"   {$$ = new TonyType(TYPE_int, nullptr);}
 |   "char"  {$$ = new TonyType(TYPE_char, nullptr);}
 |   "bool"  {$$ = new TonyType(TYPE_bool, nullptr);}
-|   Type '[' ']'        {$$ = new TonyType(TYPE_array, $1);}
+|   Type '[' ']'        {$$ = new TonyType(TYPE_array, $1); $$->set_array_size(0);}
 |   "list" '[' Type ']' {$$ = new TonyType(TYPE_list, $3);}
 ;
 
