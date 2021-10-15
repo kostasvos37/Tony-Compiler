@@ -1065,8 +1065,7 @@ public:
   // Not implemented yet
   virtual llvm::Value *compile() override {
     llvm::Value * V= ret_expr->compile();
-    Builder.CreateRet(V);
-    return nullptr;
+    return Builder.CreateRet(V);
   } 
 private:
   Expr* ret_expr;
@@ -1634,6 +1633,10 @@ public:
     }
   }
 
+  void setIsMain(){
+    isMain = true;
+  }
+
   virtual llvm::Value *compile () override {
 
     RuntimeBlock *newBlock = new RuntimeBlock();
@@ -1681,6 +1684,7 @@ public:
     
     // Compile other definitions
     for(AST *a: local_definitions) a->compile();
+    Builder.SetInsertPoint(BB);
     
     body->compile();
     
@@ -1689,7 +1693,8 @@ public:
     
     blocks.pop_back();
     scopes.closeRuntimeScope();
-
+    if(!isMain)
+      Builder.SetInsertPoint(blocks.back()->getCurrentBasicBlock());
     llvm::verifyFunction(*Fun, &llvm::errs());
     return Fun;
   } 
@@ -1697,6 +1702,7 @@ private:
   Header *header;
   StmtBody *body;
   std::vector<AST *> local_definitions;
+  bool isMain;
 };
 
 #endif

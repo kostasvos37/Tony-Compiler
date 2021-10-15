@@ -110,6 +110,7 @@ std::map<std::string, llvm::Function*> GLOBAL_FUNCTIONS;
 Program:
     Func_def {
         //std::cout << *$1;
+        $1->setIsMain();
         $1->sem();
         std::cout << "Semantic analysis done!\n";
         $1->llvm_compile_and_dump();
