@@ -7,7 +7,6 @@
 
 extern FILE *yyin;
 SymbolTable st;
-RuntimeTable rt;
 LLVMListTypes llvm_list_types;
 
 std::map<std::string, llvm::Function*> GLOBAL_FUNCTIONS;

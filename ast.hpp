@@ -74,15 +74,27 @@ public:
                              "GC_malloc", TheModule.get());
     
     // Global Scope
-    rt.openScope();
+    scopes.openRuntimeScope();
     
     initializeLibraryFunctions();
+    
+    
+    //Create "dummy main function" which calls the first program function
+    llvm::FunctionType *main_type = llvm::FunctionType::get(i32, std::vector<llvm::Type *>{}, false);
+    llvm::Function * Main = llvm::Function::Create(main_type, llvm::Function::ExternalLinkage, "main", TheModule.get());
+    llvm::BasicBlock *BB = llvm::BasicBlock::Create(TheContext, "entry", Main);
+ 
     // Emit Program Code
     
-    compile();
-    
+    auto program = compile();
+    auto *progFunc = TheModule->getFunction(program->getName());
+
+    Builder.SetInsertPoint(BB);
+    Builder.CreateCall(progFunc, {});
+    Builder.CreateRet(c32(0));
+
     // Close Program Scope
-    rt.closeScope();
+    scopes.closeRuntimeScope();
 
     bool bad = llvm::verifyModule(*TheModule, &llvm::errs());
     if (bad){
@@ -100,43 +112,43 @@ public:
     
     // puti (int n)
     llvm::FunctionType *writeIntegerType = llvm::FunctionType::get(voidT, std::vector<llvm::Type *>{i32}, false);
-	  rt.insertFunc("puti",  llvm::Function::Create(writeIntegerType, llvm::Function::ExternalLinkage, "writeInteger", TheModule.get()));
+	  scopes.insertFunc("puti",  llvm::Function::Create(writeIntegerType, llvm::Function::ExternalLinkage, "writeInteger", TheModule.get()));
 
     // putc (char c)
     llvm::FunctionType *writeCharType = llvm::FunctionType::get(voidT, std::vector<llvm::Type *>{i8}, false);
-	  rt.insertFunc("putc",  llvm::Function::Create(writeCharType, llvm::Function::ExternalLinkage, "writeChar", TheModule.get()));
+	  scopes.insertFunc("putc",  llvm::Function::Create(writeCharType, llvm::Function::ExternalLinkage, "writeChar", TheModule.get()));
 
     // putb (bool b)
     llvm::FunctionType *writeBooleanType = llvm::FunctionType::get(voidT, std::vector<llvm::Type *>{i1}, false);
-	  rt.insertFunc("putb",  llvm::Function::Create(writeBooleanType, llvm::Function::ExternalLinkage, "writeBoolean", TheModule.get()));
+	  scopes.insertFunc("putb",  llvm::Function::Create(writeBooleanType, llvm::Function::ExternalLinkage, "writeBoolean", TheModule.get()));
 
     //TODO : puts (char [])
 
     // int geti ()
     llvm::FunctionType *getiType = llvm::FunctionType::get(i32, std::vector<llvm::Type *>{}, false);
-	  rt.insertFunc("geti",  llvm::Function::Create(getiType, llvm::Function::ExternalLinkage, "readInteger", TheModule.get()));
+	  scopes.insertFunc("geti",  llvm::Function::Create(getiType, llvm::Function::ExternalLinkage, "readInteger", TheModule.get()));
     
     // char getc()
     llvm::FunctionType *getcType = llvm::FunctionType::get(i8, std::vector<llvm::Type *>{}, false);
-	  rt.insertFunc("getc",  llvm::Function::Create(getcType, llvm::Function::ExternalLinkage, "readChar", TheModule.get()));
+	  scopes.insertFunc("getc",  llvm::Function::Create(getcType, llvm::Function::ExternalLinkage, "readChar", TheModule.get()));
     
     // bool getb ()
     llvm::FunctionType *getbType = llvm::FunctionType::get(i1, std::vector<llvm::Type *>{}, false);
-	  rt.insertFunc("getb",  llvm::Function::Create(getbType, llvm::Function::ExternalLinkage, "readBoolean", TheModule.get()));
+	  scopes.insertFunc("getb",  llvm::Function::Create(getbType, llvm::Function::ExternalLinkage, "readBoolean", TheModule.get()));
 
     //TODO char [] gets ()
 
     // int abs (int n)
     llvm::FunctionType *abstype = llvm::FunctionType::get(i32, std::vector<llvm::Type *>{i32}, false);
-	  rt.insertFunc("abs",  llvm::Function::Create(abstype, llvm::Function::ExternalLinkage, "abs", TheModule.get()));
+	  scopes.insertFunc("abs",  llvm::Function::Create(abstype, llvm::Function::ExternalLinkage, "abs", TheModule.get()));
 
     // int ord(char c)
     llvm::FunctionType *ordtype = llvm::FunctionType::get(i32, std::vector<llvm::Type *>{i8}, false);
-	  rt.insertFunc("ord",  llvm::Function::Create(ordtype, llvm::Function::ExternalLinkage, "ord", TheModule.get()));
+	  scopes.insertFunc("ord",  llvm::Function::Create(ordtype, llvm::Function::ExternalLinkage, "ord", TheModule.get()));
 
     //char chr (int n)
     llvm::FunctionType *chrtype = llvm::FunctionType::get(i8, std::vector<llvm::Type *>{i32}, false);
-	  rt.insertFunc("chr",  llvm::Function::Create(chrtype, llvm::Function::ExternalLinkage, "chr", TheModule.get()));
+	  scopes.insertFunc("chr",  llvm::Function::Create(chrtype, llvm::Function::ExternalLinkage, "chr", TheModule.get()));
 
 
 
@@ -161,6 +173,9 @@ protected:
   static llvm::Type *i32;
   static llvm::Type *i64;
   static llvm::Type *voidT;
+
+  static std::vector<RuntimeBlock *> blocks;
+  static RuntimeScope scopes;
     
   static llvm::ConstantInt* c1(bool b) {
     if(b) return llvm::ConstantInt::getTrue(TheContext);
@@ -331,9 +346,7 @@ public:
 
   // Not implemented yet
   virtual llvm::Value *compile() override {
-    llvm::Value *v = rt.lookup(var)->varValue;
-    if(!v)
-      yyerror("Variable not Found");
+    llvm::Value *v = blocks.back()->getAddr(var);
     return Builder.CreateLoad(v, var.c_str());
   } 
 
@@ -377,7 +390,7 @@ public:
 
   virtual llvm::Value *compile() override {
     llvm::Value* array_index = expr->compile();
-    llvm::Value* v = rt.lookup(getName())->varValue;
+    llvm::Value* v = blocks.back()->getVal(getName());
     if(!v) yyerror("Array not Found");
     llvm::Value* array =
       Builder.CreateLoad(v, getName().c_str());
@@ -764,10 +777,11 @@ public:
   virtual llvm::Value *compile() override {
     llvm::Type* t = getOrCreateLLVMTypeFromTonyType(type);
     for (Id * id: ids) {
+      // TODO: PASSMODE
       llvm::AllocaInst* alloca = Builder.CreateAlloca(t, 0, id->getName());
-
-      // QUESTION: Why do we add alloca twice?
-      rt.insertVar(id->getName(), t, alloca, alloca);
+      blocks.back()->addVar(id->getName(), t);
+      blocks.back()->addAddr(id->getName(), alloca);
+      blocks.back()->addVal(id->getName(), alloca);
     }
     return nullptr;
   }
@@ -979,6 +993,10 @@ public:
     return isTyped;
   }
 
+  std::string getName(){
+    return id->getName();
+  }
+
   // Not implemented yet
   virtual llvm::Function *compile() override {
     
@@ -1006,6 +1024,20 @@ public:
 
     return F;
   } 
+
+  std::vector<TonyType *>   getArgs(){
+    if(formals)
+      return formals->getArgs();
+    else
+      return std::vector<TonyType *> ();
+  }
+  std::vector<std::string> getNames(){
+    if(formals)
+      return formals->getNames();
+    else
+      return std::vector<std::string> ();
+  }
+
 
 private:
   TonyType *type;
@@ -1131,7 +1163,7 @@ public:
       atom->setPassByValue(false);
       variable = atom->compile();
     } else {
-      variable = rt.lookup(atom->getName())->varValue;
+      variable = blocks.back()->getVal(atom->getName());
     }
     value = Builder.CreateBitCast(value, LLVMType);
     Builder.CreateStore(value, variable);
@@ -1428,7 +1460,8 @@ public:
         compiled_params.push_back(param->compile());
       }   
     }
-    return Builder.CreateCall(rt.lookupFunc(name->getName()), compiled_params);
+    llvm::Function *callFun = scopes.getFun(name->getName());
+    return Builder.CreateCall(callFun, compiled_params);
   }
 
   virtual std::string getName() override {
@@ -1549,6 +1582,10 @@ public:
 
   }
 
+  std::string getName(){
+    return header->getName();
+  }
+
   void append(AST* a) {
     local_definitions.push_back(a);
   }
@@ -1598,32 +1635,63 @@ public:
   }
 
   virtual llvm::Value *compile () override {
-    
-    //Open Function scope, TODO: add the function itself;
-    rt.openScope();
-    
-    // Create the function based on header
-    llvm::Function *fun = header->compile();
-    rt.setCurrentFunction(fun);
 
-    //Create Basic block
-    llvm::BasicBlock *BB = llvm::BasicBlock::Create(TheContext, "entry", fun);
-    Builder.SetInsertPoint(BB);    
-    
-    //Insert values into table
-    for (auto &arg: fun->args()) {
-      llvm::AllocaInst * Alloca = CreateEntryBlockAlloca(fun, arg.getName().str(), arg.getType());
-      Builder.CreateStore(&arg, Alloca);
-      rt.insertVar(arg.getName().str(), arg.getType(), Alloca, Alloca);
+    RuntimeBlock *newBlock = new RuntimeBlock();
+    blocks.push_back(newBlock);
+
+    std::vector<TonyType *> argTypes = header->getArgs();
+    std::vector<std::string> argNames = header->getNames();
+
+
+    for(int i=0; i<argTypes.size(); i++ ){
+      llvm::Type * translated = getOrCreateLLVMTypeFromTonyType(argTypes[i]);
+      blocks.back()->addArg(argNames[i], translated);
     }
 
+    // TODO: Here i should first check if func is declared
+
+    llvm::FunctionType *FT =
+      llvm::FunctionType::get(getOrCreateLLVMTypeFromTonyType(header->getType()),
+                              blocks.back()->getArgs(), false);
+
+    llvm::Function *Fun = llvm::Function::Create(FT,llvm::Function::ExternalLinkage, header->getName(), TheModule.get());
+    blocks.back()->setFun(Fun);
+    scopes.insertFunc(header->getName(), Fun);
+
+    scopes.openRuntimeScope();
+
+    int index = 0;
+    for(auto &Arg: Fun->args()){
+      Arg.setName(argNames[index++]);
+    }
+
+    // CREATE Basic Block
+    llvm::BasicBlock *BB = llvm::BasicBlock::Create(TheContext, "entry", Fun);
+    Builder.SetInsertPoint(BB);    
+    blocks.back()->setBlock(BB);
+
+    // Insert Parameters
+    for (auto &arg: Fun->args()) {
+      llvm::AllocaInst * Alloca = CreateEntryBlockAlloca(Fun, arg.getName().str(), arg.getType());
+      
+      blocks.front()->addAddr(std::string(arg.getName()), Alloca);
+      blocks.front()->addVal(std::string(arg.getName()), Alloca);
+      Builder.CreateStore(&arg, Alloca);
+    }
+    
+    // Compile other definitions
     for(AST *a: local_definitions) a->compile();
+    
     body->compile();
+    
     if(!header->getIsTyped())
       Builder.CreateRet(nullptr);
     
-    rt.closeScope();
-    return nullptr;
+    blocks.pop_back();
+    scopes.closeRuntimeScope();
+
+    llvm::verifyFunction(*Fun, &llvm::errs());
+    return Fun;
   } 
 private:
   Header *header;
