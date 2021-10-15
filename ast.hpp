@@ -346,7 +346,8 @@ public:
 
   // Not implemented yet
   virtual llvm::Value *compile() override {
-    llvm::Value *v = blocks.back()->getAddr(var);
+    llvm::Value *v = blocks.back()->getVal(var);
+
     return Builder.CreateLoad(v, var.c_str());
   } 
 
@@ -593,6 +594,7 @@ public:
   }
 
   virtual llvm::Value *compile() override{
+    
     llvm::Value *l = left->compile();
     llvm::Value *r = right->compile();
     
@@ -1064,7 +1066,9 @@ public:
 
   // Not implemented yet
   virtual llvm::Value *compile() override {
+
     llvm::Value * V= ret_expr->compile();
+
     return Builder.CreateRet(V);
   } 
 private:
@@ -1677,8 +1681,8 @@ public:
     for (auto &arg: Fun->args()) {
       llvm::AllocaInst * Alloca = CreateEntryBlockAlloca(Fun, arg.getName().str(), arg.getType());
       
-      blocks.front()->addAddr(std::string(arg.getName()), Alloca);
-      blocks.front()->addVal(std::string(arg.getName()), Alloca);
+      blocks.back()->addAddr(std::string(arg.getName()), Alloca);
+      blocks.back()->addVal(std::string(arg.getName()), Alloca);
       Builder.CreateStore(&arg, Alloca);
     }
     
