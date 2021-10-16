@@ -122,8 +122,9 @@ public:
     llvm::FunctionType *writeBooleanType = llvm::FunctionType::get(voidT, std::vector<llvm::Type *>{i1}, false);
 	  scopes.insertFunc("putb",  llvm::Function::Create(writeBooleanType, llvm::Function::ExternalLinkage, "writeBoolean", TheModule.get()));
 
-    //TODO : puts (char [])
-
+    // puts (char [])
+    llvm::FunctionType *writeStringType = llvm::FunctionType::get(voidT, {llvm::PointerType::get(i8,0)}, false);
+    scopes.insertFunc("puts", llvm::Function::Create(writeStringType, llvm::Function::ExternalLinkage, "writeString", TheModule.get()));
     // int geti ()
     llvm::FunctionType *getiType = llvm::FunctionType::get(i32, std::vector<llvm::Type *>{}, false);
 	  scopes.insertFunc("geti",  llvm::Function::Create(getiType, llvm::Function::ExternalLinkage, "readInteger", TheModule.get()));
@@ -136,7 +137,10 @@ public:
     llvm::FunctionType *getbType = llvm::FunctionType::get(i1, std::vector<llvm::Type *>{}, false);
 	  scopes.insertFunc("getb",  llvm::Function::Create(getbType, llvm::Function::ExternalLinkage, "readBoolean", TheModule.get()));
 
-    //TODO char [] gets ()
+    // char [] gets () TODO:FIX
+    llvm::FunctionType *getsType = llvm::FunctionType::get(voidT, std::vector<llvm::Type *>{i32, i8->getPointerTo()}, false);
+	  scopes.insertFunc("gets",  llvm::Function::Create(getsType, llvm::Function::ExternalLinkage, "readString", TheModule.get()));
+
 
     // int abs (int n)
     llvm::FunctionType *abstype = llvm::FunctionType::get(i32, std::vector<llvm::Type *>{i32}, false);
@@ -153,6 +157,9 @@ public:
 
 
     //TODO: int strlen (char [] s)
+    llvm::FunctionType *strlenType = llvm::FunctionType::get(i32, std::vector<llvm::Type *>{i8->getPointerTo()}, false);
+	  scopes.insertFunc("strlen",  llvm::Function::Create(strlenType, llvm::Function::ExternalLinkage, "strlen", TheModule.get()));
+
     //TODO: int strcmp (char[] s1, s2)
     //TODO: strcpy (char[] trg, src)
     //TODO: strcat (char[] trg, src)
@@ -346,7 +353,7 @@ public:
 
   // Not implemented yet
   virtual llvm::Value *compile() override {
-    llvm::Value *v = blocks.back()->getVal(var);
+    llvm::Value *v = lookupVal(blocks, var);
 
     return Builder.CreateLoad(v, var.c_str());
   } 
@@ -391,7 +398,7 @@ public:
 
   virtual llvm::Value *compile() override {
     llvm::Value* array_index = expr->compile();
-    llvm::Value* v = blocks.back()->getVal(getName());
+    llvm::Value* v = lookupVal(blocks, getName());
     if(!v) yyerror("Array not Found");
     llvm::Value* array =
       Builder.CreateLoad(v, getName().c_str());
@@ -773,6 +780,7 @@ public:
   }
   
   virtual void sem() override {
+    if(isRef) type->setPassMode(REF);
     for (Id * i : ids) {i->set_type(type); i->insertIntoScope(T_VAR);}
   }
 
@@ -801,9 +809,14 @@ public:
     return ret;
   }
 
+  void setIsRef(bool b){
+    isRef = b;
+  }
+
 protected:
   std::vector<Id *> ids;
   TonyType* type;
+  bool isRef;
 };
 
 class Formal: public AST {
@@ -815,10 +828,10 @@ public:
   }
   
   virtual void sem() override {
+    var_list->setIsRef(is_ref);
     var_list->sem();
   }
 
-  //TODO: Handle refs
   std::pair<TonyType*, int> getArgs() {
     return var_list->getArgs();
   }
@@ -830,7 +843,7 @@ public:
   // Not implemented yet
   virtual llvm::Value *compile() override {
     return nullptr;
-  } 
+  }
 private:
   VarList* var_list;
   bool is_ref;
@@ -999,7 +1012,7 @@ public:
     return id->getName();
   }
 
-  // Not implemented yet
+  // Not implemented yet - the below insn't used anymore
   virtual llvm::Function *compile() override {
     
     llvm::Twine name = llvm::Twine(id->getName());
@@ -1166,7 +1179,7 @@ public:
       atom->setPassByValue(false);
       variable = atom->compile();
     } else {
-      variable = blocks.back()->getVal(atom->getName());
+      variable = lookupVal(blocks, atom->getName());
     }
     value = Builder.CreateBitCast(value, LLVMType);
     Builder.CreateStore(value, variable);
@@ -1649,6 +1662,11 @@ public:
     std::vector<TonyType *> argTypes = header->getArgs();
     std::vector<std::string> argNames = header->getNames();
 
+    for(auto *i: argTypes){
+      if(i->getPassMode() == VAL) std::cout << "VAL\n";
+      else std::cout << "REF\n";
+    }
+
 
     for(int i=0; i<argTypes.size(); i++ ){
       llvm::Type * translated = getOrCreateLLVMTypeFromTonyType(argTypes[i]);
@@ -1686,6 +1704,12 @@ public:
       Builder.CreateStore(&arg, Alloca);
     }
     
+    std::vector<std::string> previousVars = transferPrevBlockVariables(blocks);
+    for (auto it :previousVars){
+      llvm::AllocaInst * Alloca = CreateEntryBlockAlloca(Fun, it, blocks.back()->getVar(it));
+      blocks.back()->addAddr(it, Alloca);
+      blocks.back()->addVal(it, Alloca);
+    }
     // Compile other definitions
     for(AST *a: local_definitions) a->compile();
     Builder.SetInsertPoint(BB);

@@ -54,11 +54,17 @@ public:
         vars[name] = type;
     }
 
+    bool containsVar(std::string key){
+        if(vars.count(key) == 1) return true;
+        return false;
+    }
+
     void addVar(std::string name, llvm::Type *type){
         vars[name] = type;
     }
 
-    llvm::Type *getVar(std::string(name)){
+    llvm::Type *getVar(std::string name){
+        if (vars.count(name) == 0) {return nullptr;}
         return vars[name];
     }
     
@@ -66,7 +72,8 @@ public:
         addrs[name] = alloca;
     }
 
-    llvm::AllocaInst *getAddr(std::string(name)){
+    llvm::AllocaInst *getAddr(std::string name){
+        if (addrs.count(name) == 0) {return nullptr;}
         return addrs[name];
     }
 
@@ -74,8 +81,17 @@ public:
         values[name] = v;
     }
 
-    llvm::Value *getVal(std::string(name)){
+    llvm::Value *getVal(std::string name){
+        if (values.count(name) == 0) {return nullptr;}
         return values[name];
+    }
+
+    std::vector<std::string> getAllKeys(){
+        std::vector<std::string> keys; 
+        for(auto it = vars.begin(); it!= vars.end(); ++it){
+            keys.push_back(it->first);
+        }
+        return keys;
     }
 
     void setBlock(llvm::BasicBlock *BB){
@@ -135,6 +151,53 @@ private:
     std::vector<std::map<std::string, llvm::Function *>> functions;
     
 };
+
+static std::vector<std::string> transferPrevBlockVariables(std::vector<RuntimeBlock *> blocks){
+    std::vector<std::string> newKeys;
+    if(blocks.size() < 2) return newKeys;
+    
+    // Get all keys from previous scope
+    RuntimeBlock *secondLast =  blocks.end()[-2];
+    RuntimeBlock *last = blocks.back();
+    std::vector<std::string> keys = secondLast->getAllKeys();
+    
+    //Iterate and add only the new ones
+    for(auto it = keys.begin(); it!= keys.end(); ++it){    
+        if(last->containsVar(*it)) continue;
+        newKeys.push_back(*it);
+        last->addVar(*it, secondLast->getVar(*it));
+    }
+    return newKeys;
+}
+
+
+ static llvm::Type *lookupVar(std::vector<RuntimeBlock *> blocks, std::string name){
+    llvm::Type *t = nullptr;
+    for (auto i = blocks.rbegin(); i!= blocks.rend(); i++){
+        t = (*i)->getVar(name);
+        if (t!= nullptr) return t;
+    }
+    return nullptr;
+}
+
+static llvm::AllocaInst *lookupAddr(std::vector<RuntimeBlock *> blocks, std::string name){
+    llvm::AllocaInst *t = nullptr;
+    for (auto i = blocks.rbegin(); i!= blocks.rend(); i++){
+        t = (*i)->getAddr(name);
+        if (t!= nullptr) return t;
+    }
+    return nullptr;
+}
+
+static llvm::Value *lookupVal(std::vector<RuntimeBlock *> blocks, std::string name){
+    llvm::Value *t= nullptr;
+    for (auto i = blocks.rbegin(); i!= blocks.rend(); i++){
+        t = (*i)->getVal(name);
+        if (t!= nullptr) return t;
+    }
+    return nullptr;
+}
+
 
 extern LLVMListTypes llvm_list_types;
 

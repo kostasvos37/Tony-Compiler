@@ -6,13 +6,14 @@
 #include <vector>
 
 enum TypeBlock {TYPE_int, TYPE_bool, TYPE_char, TYPE_array, TYPE_list, TYPE_function, TYPE_void, TYPE_any};
+enum PassMode {VAL, REF};
 void yyerror(const char *msg, ...);
 
 class TonyType {
 public:
-    TonyType(TypeBlock current, TonyType *nested): current_type(current), nested_type(nested) {}
+    TonyType(TypeBlock current, TonyType *nested): current_type(current), nested_type(nested), pass(VAL) {}
     TonyType(TypeBlock current, TonyType *nested, TonyType *ret, std::vector<TonyType *> args, bool dec): 
-    current_type(current), nested_type(nested), returnType(ret), function_args(args), declDef(dec){    }
+    current_type(current), nested_type(nested), returnType(ret), function_args(args), declDef(dec), pass(VAL){    }
     ~TonyType() {delete nested_type;};
     TypeBlock get_current_type() {
         return current_type;
@@ -24,6 +25,13 @@ public:
     TonyType *get_return_type() {
         if (current_type != TYPE_function) yyerror("No return type for a non function type.");
         return returnType;
+    }
+
+    void setPassMode(PassMode p){
+      pass = p;
+    }
+    PassMode getPassMode(){
+      return pass;
     }
 
     int get_array_size() {
@@ -91,6 +99,11 @@ protected:
 
     //For arrays only
     int size;
+
+    //Passmode
+    PassMode pass;
+
+
 };
 
 bool check_type_equality(TonyType* type1, TonyType* type2);
