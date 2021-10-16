@@ -6,7 +6,7 @@ A compiler for Tony language...obviously.
 - Run: `make` to create the `./tony` executable.
 - Run: `./tony <tony-program>.tony` to produce LLVM code.
   A file called `out.ll` is created, and it contains the code.
-- Run: `clang out.ll lib.a -o <desired-name>.o` to produce a binary executable.
+- Run: `clang out.ll lib.a -o <desired-name>.o -lgc` to produce a binary executable.
 - Run the executable: `./<desired-name>.o`.
 
 ### Run Tests
