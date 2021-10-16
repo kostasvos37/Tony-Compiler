@@ -70,6 +70,7 @@ public:
         case TYPE_bool: return std::string("bool");
         case TYPE_char: return std::string("char");
         case TYPE_any: return std::string("int");
+        case TYPE_array: return std::string("arr");
         case TYPE_list: {
           return std::string("list_") + nested_type->createHashKeyForType();
         }
