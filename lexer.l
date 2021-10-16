@@ -8,7 +8,7 @@
 
 int comment_counter = 0;
 int linecount=1;
-unsigned char fixSingleChar(char *str);
+char fixSingleChar(char *str);
 
 /*
     L -> Letters
@@ -72,7 +72,7 @@ P [\x20-\x7e]
 {S}                 {return yytext[0];}
 ":="				{return T_assign;}
 
-{L}({L}|{D}|"_"|"?")*              {yylval.name=strdup(yytext); return T_id;} 
+{L}({L}|{D}|"_"|"?")*              {yylval.name= strdup(yytext); return T_id;} 
 
 "'"([\x20-\x26\x28-\x7e]|\\{E})"'" {
   
@@ -81,10 +81,11 @@ P [\x20-\x7e]
   yylval.c=fixSingleChar(yytext); return T_singlechar;}
 
 \"([\x20-\x21\x23-\x7e]|\\\")*\"   {
-                                char *str = yytext; 
-                                str++; 
-                                str[strlen(str)-1] = '\0';
-                                yylval.name=strdup(str); return T_string;}
+  char *str = yytext; 
+  str++; 
+  str[strlen(str)-1] = '\0';
+  yylval.name= strdup(str); return T_string;
+                                }
 
 %[^\n]*\n			    {linecount++;}
 
@@ -113,13 +114,13 @@ void yyerror(const char *msg, ...) {
   exit(1);
 }
 
-unsigned char fixSingleChar(char *str){ 
+char fixSingleChar(char *str){ 
   
   str++;
   str[strlen(str)-1] = '\0';
-  if(str[0] != '\\') return (unsigned char) str[0];
+  if(str[0] != '\\') return str[0];
   str++;
-  unsigned char x;
+  char x;
   switch(str[0]){
     case 'n': return '\n';
     case 't': return '\t';
@@ -128,7 +129,7 @@ unsigned char fixSingleChar(char *str){
     case '\\': return '\\';
     case '\'': return '\'';
     case '\"': return '\"';
-    case 'x': str++; x = (unsigned char) strtol(str, NULL, 16); return x; break;
+    case 'x': str++; x =  (char) strtol(str, NULL, 16); return x; break;
     default : 
       yyerror("Lexer error: Unexpected token at line %d", linecount); 
       return '\0';

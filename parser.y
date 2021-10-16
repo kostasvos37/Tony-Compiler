@@ -55,7 +55,7 @@ std::map<std::string, llvm::Function*> GLOBAL_FUNCTIONS;
 %union {
     char *name;
     int num;
-    unsigned char c;
+    char c;
 
     Expr *expr;
     Atom *atom;
