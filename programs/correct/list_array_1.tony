@@ -1,0 +1,15 @@
+def main():   % no "err" should be printed!
+  list[int[]] x
+  int[] tmp
+  int[] y
+  int[] z
+  y := new int[2]
+  y[0] := 4
+  z := new int[3]
+  z[0] := 2
+  x := y # z # nil
+  tmp := head(x)
+  puti(tmp[0])
+  tmp := head(tail(x))
+  puti(tmp[0])  
+end
