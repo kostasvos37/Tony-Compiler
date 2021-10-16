@@ -406,7 +406,7 @@ public:
     if (pass_by_value) {
       
       // In this case, the ArrayElement is NOT used on the left side
-      // of an assignment.
+      // of an assignment, but on the right.
       return Builder.CreateLoad(elem_ptr, "elem");
     }
     return elem_ptr;
@@ -418,7 +418,45 @@ private:
 
 class StringLiteral: public Atom {
 public:
-  StringLiteral(std::string str): strlit(str) {}
+  StringLiteral(std::string str) {
+    int len = str.length();
+    strlit = str;
+    int i = 0; // Iterates over `str`.
+    int j = 0; // Iterates over `strlit`.
+    
+    // We validate the escape characters (e.g: '\n', \0' etc...) in the string.
+    // Initially they are parsed as two separate characters, so we must
+    // squeeze them into a single character.
+    while(i < len) {
+      if(str[i] == '\\') {
+        if(i == len-1) {
+          yyerror("Invalid backslash at the end of string literal.");
+        }
+
+        // In this case, we've caught an escape character.
+        switch(str[i+1]) {
+          case 'n':  strlit[j] = '\n'; i+=2; break;
+          case 't':  strlit[j] = '\t'; i+=2; break;
+          case 'r':  strlit[j] = '\r'; i+=2; break;
+          case '0':  strlit[j] = '\0'; i+=2; break;
+          case '\\': strlit[j] = '\\'; i+=2; break;
+          case '\'': strlit[j] = '\''; i+=2; break;
+          case '\"': strlit[j] = '\"'; i+=2; break;
+          case 'x':  strlit[j] = char(stoi(str.substr(i+2, 2), 0, 16)); i+=4; break;
+        default:
+          yyerror("Invalid escape character in string literal.");
+        }
+      } else {
+        // In this case, we've caught a regular character.
+        strlit[j] = str[i];
+        i++;
+      }
+      j++;
+    }
+
+    // We throw away the trailing unused characters.
+    strlit = strlit.substr(0, j);
+  }
   ~StringLiteral () {}
   virtual void printOn(std::ostream &out) const override {
     out << "<String value=\"" << strlit << "\"> ";
@@ -436,9 +474,18 @@ public:
     return strlit;
   }
 
-  // Not implemented yet
   virtual llvm::Value *compile() override {
-    return nullptr;
+    llvm::Value* p =
+      Builder.CreateCall(TheMalloc, c32(strlit.length()+1), "strlitaddr");
+    p = Builder.CreateBitCast(p, getOrCreateLLVMTypeFromTonyType(type));
+    llvm::Value* char_ptr;
+    for (std::string::size_type i = 0; i < strlit.length(); i++) {
+        char_ptr = Builder.CreateGEP(p, c32(i));
+        Builder.CreateStore(c8(strlit[i]), char_ptr);
+    }
+    char_ptr = Builder.CreateGEP(p, c32(strlit.length()));
+    Builder.CreateStore(c8('\0'), char_ptr);
+    return p;
   } 
 private:
   std::string strlit;
