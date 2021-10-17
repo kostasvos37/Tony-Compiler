@@ -208,12 +208,15 @@ protected:
    * must construct the corresponding LLVM type.
    */
   static llvm::Type* getOrCreateLLVMTypeFromTonyType(TonyType *t) {
+    
+    //Initializing to avoid warning
+    llvm::Type *retType = i32;
     switch(t->get_current_type()) {
-      case TYPE_int: return i32;
-      case TYPE_bool: return i1;
-      case TYPE_char: return i8;
-      case TYPE_any: return i32;
-      case TYPE_void: return voidT;
+      case TYPE_int:  retType = i32; break;
+      case TYPE_bool: retType = i1;  break;
+      case TYPE_char: retType = i8;  break;
+      case TYPE_any:  retType = i32; break;
+      case TYPE_void: return voidT;  break;
       case TYPE_list: {
         std::string hash = t->createHashKeyForType();
         llvm::Type* list_type = llvm_list_types.lookup(hash);
@@ -236,7 +239,7 @@ protected:
           llvm_list_types.insert(hash, pointer_to_node_type);
           list_type = pointer_to_node_type;
         }
-        return list_type;
+        return list_type; break;
       }
       case TYPE_array: {
         llvm::Type* element_type =
@@ -248,11 +251,16 @@ protected:
         }
         llvm::ArrayType* array_type =
           llvm::ArrayType::get(element_type, t->get_array_size());
-        return array_type;
+        return array_type; break;
       }
       default: yyerror("Type conversion not implemented yet");
     }
-    return nullptr;
+
+
+
+    if(t->getPassMode() == REF)
+      retType = retType->getPointerTo();
+    return retType;
   }
 
   static llvm::AllocaInst *CreateEntryBlockAlloca (llvm::Function *TheFunction, const std::string &VarName, llvm::Type* Ty){
@@ -1708,12 +1716,6 @@ public:
 
     std::vector<TonyType *> argTypes = header->getArgs();
     std::vector<std::string> argNames = header->getNames();
-
-    for(auto *i: argTypes){
-      if(i->getPassMode() == VAL) std::cout << "VAL\n";
-      else std::cout << "REF\n";
-    }
-
 
     for(int i=0; i<argTypes.size(); i++ ){
       llvm::Type * translated = getOrCreateLLVMTypeFromTonyType(argTypes[i]);
