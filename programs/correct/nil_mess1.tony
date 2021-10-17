@@ -43,6 +43,6 @@ def main():   % no "err" should be printed!
     puts("err\n")
   end
 
-  puts("If any \"err\" above, then WRONG! If you do not see this message, then also WRONG!\n")
+  puts("42")
 
 end

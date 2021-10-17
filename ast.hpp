@@ -359,7 +359,6 @@ public:
     // std::cout << "I think i saw a variable: " << var << " with type " << type <<"!\n";
   }
 
-  // Not implemented yet
   virtual llvm::Value *compile() override {
     llvm::Value *v = lookupVal(blocks, var);
 
@@ -510,7 +509,6 @@ public:
     type = new TonyType(TYPE_char, nullptr);
   }
 
-  // Not implemented yet
   virtual llvm::Value *compile() override {
     return c8(char_const);
   } 
@@ -1067,7 +1065,6 @@ public:
     return id->getName();
   }
 
-  // Not implemented yet - the below insn't used anymore
   virtual llvm::Function *compile() override {
     
     llvm::Twine name = llvm::Twine(id->getName());
@@ -1132,12 +1129,18 @@ public:
     st.setScopeHasReturn();
   }
 
-  // Not implemented yet
   virtual llvm::Value *compile() override {
 
-    llvm::Value * V= ret_expr->compile();
+    llvm::Value* v = ret_expr->compile();
 
-    return Builder.CreateRet(V);
+    if (is_nil_constant(ret_expr->get_type())) {
+      // If `nil` is returned, we must change its LLVM type
+      // (null pointer to an i32) to the return type of the
+      // that exists in the function signature.
+      v = Builder.CreateBitCast(v, blocks.back()->getFun()->getReturnType());
+    }
+
+    return Builder.CreateRet(v);
   } 
 private:
   Expr* ret_expr;
@@ -1288,7 +1291,6 @@ public:
     if(nextIf != nullptr) nextIf->sem();
   }
 
-  // Not implemented yet
   virtual llvm::Value *compile() override {
     
     // Last Else Block
@@ -1373,7 +1375,6 @@ public:
     }
   }
 
-  // Not implemented yet
   virtual llvm::Value *compile() override {
     for (auto s: simples){
       s->compile();
@@ -1409,7 +1410,6 @@ public:
     stmt_body->sem();
   }
 
-  // Not implemented yet
   virtual llvm::Value *compile() override {
     initializations->compile();
 
@@ -1526,13 +1526,28 @@ public:
 
   virtual llvm::Value *compile() override {
     std::vector<llvm::Value*> compiled_params;
-    if(hasParams){
+    llvm::Function* called_function = scopes.getFun(name->getName());
+    
+    // An iterator over the LLVM types of the parameters in the
+    // function signature.
+    llvm::FunctionType::param_iterator iter =
+      called_function->getFunctionType()->param_begin();
+    llvm::Value* v;
+    if(hasParams) {
       for (Expr* param : params->get_expr_list()) {
-        compiled_params.push_back(param->compile());
+        v = param->compile();
+        
+        if (is_nil_constant(param->get_type())) {
+          // If `nil` is passed as an input parameter, we must change
+          // its LLVM type (null pointer to an i32) to the type of the
+          // corresponding parameter in the function signature.
+          v = Builder.CreateBitCast(v, *iter);
+        }
+        compiled_params.push_back(v);
+        iter++;
       }   
     }
-    llvm::Function *callFun = scopes.getFun(name->getName());
-    return Builder.CreateCall(callFun, compiled_params);
+    return Builder.CreateCall(called_function, compiled_params);
   }
 
   virtual std::string getName() override {
