@@ -307,6 +307,7 @@ protected:
 };
 
 class Stmt: public AST {
+public:
 };
 
 
@@ -1136,12 +1137,12 @@ public:
     if (is_nil_constant(ret_expr->get_type())) {
       // If `nil` is returned, we must change its LLVM type
       // (null pointer to an i32) to the return type of the
-      // that exists in the function signature.
+      // function.
       v = Builder.CreateBitCast(v, blocks.back()->getFun()->getReturnType());
     }
 
     return Builder.CreateRet(v);
-  } 
+  }
 private:
   Expr* ret_expr;
 };
@@ -1168,8 +1169,12 @@ public:
 
 class StmtBody: public AST {
 public:
-  StmtBody(): stmts() {}
+  StmtBody(): stmts(), has_return(false) {}
   ~StmtBody() { for (Stmt *s : stmts) delete s; }
+  
+  bool hasReturnStmt() {
+    return has_return;
+  }
   void append(Stmt* stmt) {
     stmts.push_back(stmt);
   }
@@ -1195,12 +1200,20 @@ public:
   virtual llvm::Value *compile() override {
     for (Stmt *s : stmts) {
       s->compile();
+      if (dynamic_cast<Return*>(s) != nullptr) {
+        // In this case, we've reached a `return` statement.
+        // So, we don't compile the remaining statements in the
+        // statement body.
+        has_return = true;
+        break;
+      }
     }
     return nullptr;
   }
   
 private:
   std::vector<Stmt*> stmts;
+  bool has_return;
 };
 
 class Assign: public Simple {
@@ -1265,20 +1278,31 @@ public:
 };
 
 
+/*
+ * This class represents Tony's `if`, `elsif` and `else` statements, not just `if`.
+ */
 class If: public Stmt {
 public:
-  If(Expr *if_condition, StmtBody *if_stmt_body, If* next): condition(if_condition), statement(if_stmt_body), nextIf(next) {}
+  If(Expr* if_condition, StmtBody* if_stmt_body, If* next):
+    condition(if_condition) ,stmt_body(if_stmt_body), next_if(next) {}
   ~If() {
     delete condition;
-    delete statement; 
-    if(nextIf != nullptr) delete nextIf;
+    delete stmt_body; 
+    if(next_if != nullptr) delete next_if;
+  }
+  virtual StmtBody* getStmtBody() {
+    return stmt_body;
+  }
+
+  virtual bool isElse() {
+    return condition == nullptr;
   }
 
   virtual void printOn(std::ostream &out) const override {
     out << "\n<If>\n"; 
     if (condition != nullptr) out << *condition;
-    out << *statement;
-    if (nextIf != nullptr) out << *nextIf;
+    out << *stmt_body;
+    if (next_if != nullptr) out << *next_if;
     out << "\n</If>\n";
   }
 
@@ -1287,64 +1311,83 @@ public:
     if(condition != nullptr && !condition->type_check(TYPE_bool)) {
         yyerror("TonyType mismatch. 'If-condition' is not boolean.");
       }
-    statement->sem();
-    if(nextIf != nullptr) nextIf->sem();
+    stmt_body->sem();
+    if(next_if != nullptr) next_if->sem();
   }
 
-  virtual llvm::Value *compile() override {
-    
-    // Last Else Block
-    if(condition == nullptr && statement != nullptr){
-      statement->compile();
+  // TODO: Currently we create a `MergeBB` for each `if`/`elisf`/`else`
+  // statement. This works but it isn't correct. We must have only one
+  // `MergeBB` for the whole `if`-`then`-`else` statement.
+  llvm::Value* compile() override {
+    // IMPORTANT: We don't create a new basic block for this statement yet.
+    // The condition check for an `if` statement remains in the same
+    // basic block as statements before the `if`. BUT, later, we will start
+    // a new basic block for the statement body under `then`.
+    if (condition == nullptr) {
+      // In this case, we are in an `else` statement (no condition).
+      if (stmt_body != nullptr) {
+        stmt_body->compile();
+      }
       return nullptr;
     }
-    llvm::Value *cond = condition->compile();
+
+    llvm::Value* cond = condition->compile();
+    // QUESTION: Can this ever be true?
     if(!cond) return nullptr;
-  
-    //Convert Condition to bool
+    // We convert the condition to an LLVM bool
     cond = Builder.CreateICmpNE(cond, c1(0), "ifcond");
-    
+    // This is the function in which we're in. We will need this to create
+    // basic blocks later on, for `then`, `else` etc... 
+    llvm::Function* TheFunction = Builder.GetInsertBlock()->getParent();
+    // We create the usual basic blocks (BB)
+    llvm::BasicBlock* then_bb  = llvm::BasicBlock::Create(TheContext, "then", TheFunction);
+    llvm::BasicBlock* else_bb  = llvm::BasicBlock::Create(TheContext, "else");
 
-    llvm::Function *TheFunction = Builder.GetInsertBlock()->getParent();
+    // This is the basic block that all the previous blocks (for `then` and `else`)
+    // will jump to, after their execution is finished. This way, the execution
+    // will move on past the `if-then-else` statement.
+    llvm::BasicBlock* merge_bb = llvm::BasicBlock::Create(TheContext, "exitfromif");
 
-    //Create Basic Blocks
-    llvm::BasicBlock *ThenBB = llvm::BasicBlock::Create(TheContext, "then", TheFunction);
-    llvm::BasicBlock *ElseBB = llvm::BasicBlock::Create(TheContext, "else"); 
-    llvm::BasicBlock *MergeBB= llvm::BasicBlock::Create(TheContext, "ifcont");
+    if(next_if != nullptr) {
+      Builder.CreateCondBr(cond, then_bb, else_bb);
+    } else {
+      Builder.CreateCondBr(cond, then_bb, merge_bb);
+    }
 
-    Builder.CreateCondBr(cond, ThenBB, ElseBB);
+    // This is the `then` statement. We start a new basic block.
+    Builder.SetInsertPoint(then_bb);
+    stmt_body->compile();
+    // Basic blocks in LLVM end with either a `ret` or a `br`.
+    if(!stmt_body->hasReturnStmt()) {
+      Builder.CreateBr(merge_bb);
+    }
     
-    // Then Statement  
-    Builder.SetInsertPoint(ThenBB);
-    statement->compile();
+    if(next_if != nullptr) {
+      // Append the basic block for `else` to the list of basic blocks
+      // of this function.
+      TheFunction->getBasicBlockList().push_back(else_bb);
+      // This is the `else` or `elsif` statement. We start a new basic block.
+      Builder.SetInsertPoint(else_bb);
+      next_if->compile();
+      // Next `Ifs` must jump to the current merge block, after they're done.
+      if(!next_if->isElse() || !next_if->getStmtBody()->hasReturnStmt()) {
+        Builder.CreateBr(merge_bb);
+      }
+    }
     
-    Builder.CreateBr(MergeBB);
-    ThenBB = Builder.GetInsertBlock();
-        
-  
-    // Emit else block
-    TheFunction->getBasicBlockList().push_back(ElseBB);
-    
-    Builder.SetInsertPoint(ElseBB);
-
-    if(nextIf != nullptr)
-      nextIf->compile();
-    
-    Builder.CreateBr(MergeBB);
-    //Update current block, code for else can change it
-    ElseBB = Builder.GetInsertBlock();
-
-    //Emit Merge Block
-    TheFunction->getBasicBlockList().push_back(MergeBB);
-    Builder.SetInsertPoint(MergeBB);
+    // Append the basic block that comes after the whole `if-then-else`
+    // statement to the list of basic blocks of this current function.
+    TheFunction->getBasicBlockList().push_back(merge_bb);
+    // The execution of the program continues in a new basic block.
+    Builder.SetInsertPoint(merge_bb);
     return nullptr;
-  } 
+  }
 
 
 private:
-  Expr *     condition;
-  StmtBody * statement;
-  If *nextIf;
+  Expr*     condition;
+  StmtBody* stmt_body;
+  If*       next_if;
 };
 
 class SimpleList: public AST {
@@ -1780,8 +1823,27 @@ public:
     
     body->compile();
     
-    if(!header->getIsTyped())
-      Builder.CreateRet(nullptr);
+    if (Fun->getReturnType()->isVoidTy()) {
+			Builder.CreateRetVoid();
+    }
+		else { 
+			if (!body->hasReturnStmt()) {
+        // Return a 'dummy' value for the case that the function
+        // has no return statement.
+				if (Fun->getReturnType()->isIntegerTy(32))
+					Builder.CreateRet(c32(0));
+				else if(Fun->getReturnType()->isIntegerTy(8))
+					Builder.CreateRet(c8(0));
+				else if(Fun->getReturnType()->isIntegerTy(1))
+					Builder.CreateRet(c1(0));
+        else {
+          llvm::Type* ret_type = getOrCreateLLVMTypeFromTonyType(header->getType());
+					llvm::ConstantPointerNull* ret_val =
+            llvm::ConstantPointerNull::get(llvm::Type::getInt32Ty(TheContext)->getPointerTo());
+					Builder.CreateRet(Builder.CreateBitCast(ret_val, ret_type));
+        }
+			}
+		}
     
     blocks.pop_back();
     scopes.closeRuntimeScope();
