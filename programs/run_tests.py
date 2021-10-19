@@ -54,7 +54,7 @@ for filename in glob.glob(os.path.join(path_for_incorrect_tests, '*.tony')):
         continue
     unexpected_correct.append(filename)
 
-print("Test programs that ran successfully as expected...")
+print("Test programs that errored out as expected...")
 for f in expected_errors:
     print("  ", os.path.basename(f))
 

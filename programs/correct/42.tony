@@ -1,0 +1,3 @@
+def hello ():
+   puts("42")
+end

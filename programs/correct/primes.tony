@@ -1,0 +1,42 @@
+def primes ():
+
+   def bool prime (int n):
+      int i
+      if n < 0:
+         return prime(-n)
+      elsif n < 2:
+         return false
+      elsif n = 2:
+         return true
+      elsif n mod 2 = 0:
+         return false
+      else:
+         for i := 3; i <= n / 2; i := i+2:
+            if n mod i = 0:
+               return false
+            end
+         end
+      end
+      return true
+   end
+
+   int limit, number, counter
+
+   limit := 181 % there are 42 prime numbers lower than 181
+   counter := 0
+   if limit >= 2:
+      counter := counter + 1
+   end
+   if limit >= 3:
+      counter := counter + 1
+   end
+   for number := 6; number <= limit; number := number + 6:
+      if prime(number-1):
+         counter := counter + 1
+      end
+      if (number <> limit) and prime(number+1):
+         counter := counter + 1
+      end
+   end
+   puti(counter)
+end
