@@ -4,6 +4,7 @@
 
 #include <iostream>
 #include <vector>
+#include <map>
 
 enum TypeBlock {TYPE_int, TYPE_bool, TYPE_char, TYPE_array, TYPE_list, TYPE_function, TYPE_void, TYPE_any};
 enum PassMode {VAL, REF};
@@ -13,7 +14,7 @@ class TonyType {
 public:
     TonyType(TypeBlock current, TonyType *nested): current_type(current), nested_type(nested), pass(VAL) {}
     TonyType(TypeBlock current, TonyType *nested, TonyType *ret, std::vector<TonyType *> args, bool dec): 
-    current_type(current), nested_type(nested), returnType(ret), function_args(args), declDef(dec), pass(VAL){    }
+    current_type(current), nested_type(nested), returnType(ret), function_args(args), declDef(dec), pass(VAL){}
     ~TonyType() {delete nested_type;};
     TypeBlock get_current_type() {
         return current_type;
@@ -82,6 +83,15 @@ public:
     std::vector<TonyType *> get_function_args (){
       return function_args;
     }
+
+    void addPreviousScopeArg (std::string arg, TonyType *t){
+      previous_scope_args[arg] = t;
+    }
+
+    std::map<std::string, TonyType*> getPreviousScopeArgs (){
+      return previous_scope_args;
+    }
+
     bool isDeclared() {
       return declDef;
     }
@@ -96,6 +106,7 @@ protected:
     //For functions only
     TonyType *returnType;
     std::vector<TonyType *> function_args;
+    std::map<std::string, TonyType*> previous_scope_args;
     bool declDef;
 
     //For arrays only
