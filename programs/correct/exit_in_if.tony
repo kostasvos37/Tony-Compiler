@@ -1,0 +1,13 @@
+def main():
+   char x, y
+   x := '4'
+   y := '2'
+   if (x = '4'):
+      puts("42")
+      exit
+      puts("not yet!") % this is never executed
+   end
+   % nothing fron here and on should get executed
+   putc(y)
+   exit
+end

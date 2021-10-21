@@ -1157,24 +1157,26 @@ public:
   virtual void sem() override{
     TonyType *t = st.getCurrentScopeReturnType();
     if(t->get_current_type() != TYPE_void){
-        yyerror("Exit from a typed function.");
+        yyerror("Found 'exit' statement in a typed function.");
     }
   }
 
-  // Not implemented yet
-  virtual llvm::Value *compile() override {
-    return nullptr;
-  } 
+  llvm::Value* compile() override {return Builder.CreateRetVoid();}
 };
 
 class StmtBody: public AST {
 public:
-  StmtBody(): stmts(), has_return(false) {}
-  ~StmtBody() { for (Stmt *s : stmts) delete s; }
+  StmtBody(): stmts(), has_return(false), has_exit(false) {}
+  ~StmtBody() {for (Stmt *s : stmts) delete s;}
   
   bool hasReturnStmt() {
     return has_return;
   }
+
+  bool hasExitStmt() {
+    return has_exit;
+  }
+
   void append(Stmt* stmt) {
     stmts.push_back(stmt);
   }
@@ -1207,13 +1209,20 @@ public:
         has_return = true;
         break;
       }
+      if (dynamic_cast<Exit*>(s) != nullptr) {
+        // In this case, we've reached a `return` statement.
+        // So, we don't compile the remaining statements in the
+        // statement body.
+        has_exit = true;
+        break;
+      }
     }
     return nullptr;
   }
   
 private:
   std::vector<Stmt*> stmts;
-  bool has_return;
+  bool has_return, has_exit;
 };
 
 class Assign: public Simple {
@@ -1358,7 +1367,7 @@ public:
     Builder.SetInsertPoint(then_bb);
     stmt_body->compile();
     // Basic blocks in LLVM end with either a `ret` or a `br`.
-    if(!stmt_body->hasReturnStmt()) {
+    if(!stmt_body->hasReturnStmt() && !stmt_body->hasExitStmt()) {
       Builder.CreateBr(merge_bb);
     }
     
@@ -1370,7 +1379,8 @@ public:
       Builder.SetInsertPoint(else_bb);
       next_if->compile();
       // Next `Ifs` must jump to the current merge block, after they're done.
-      if(!next_if->isElse() || !next_if->getStmtBody()->hasReturnStmt()) {
+      if(!next_if->isElse() ||
+         (!next_if->getStmtBody()->hasReturnStmt() && !next_if->getStmtBody()->hasExitStmt())) {
         Builder.CreateBr(merge_bb);
       }
     }
@@ -1767,7 +1777,7 @@ public:
     isMain = true;
   }
 
-  virtual llvm::Value *compile () override {
+  llvm::Value* compile () override {
 
     RuntimeBlock *newBlock = new RuntimeBlock();
     blocks.push_back(newBlock);
@@ -1824,7 +1834,9 @@ public:
     body->compile();
     
     if (Fun->getReturnType()->isVoidTy()) {
-			Builder.CreateRetVoid();
+      if (!body->hasExitStmt()) {
+			  Builder.CreateRetVoid();
+      }
     }
 		else { 
 			if (!body->hasReturnStmt()) {

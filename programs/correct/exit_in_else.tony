@@ -1,0 +1,16 @@
+def main():
+   char x, y
+   x := '4'
+   y := '2'
+   if (x = y):
+      puts("17")
+      exit
+   else:
+      puts("42")
+      exit
+      puts("i've gone rogue...")
+   end
+   % nothing fron here and on should get executed
+   puts("something is broken...\n")
+   exit
+end

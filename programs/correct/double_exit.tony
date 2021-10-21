@@ -1,0 +1,9 @@
+def main():
+   char x, y
+   x := '4'
+   y := '2'
+   putc(x)
+   putc(y)
+   exit
+   exit % this exit statement gets ignored
+end
