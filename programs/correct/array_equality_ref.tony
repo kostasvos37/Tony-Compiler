@@ -1,0 +1,14 @@
+def main():
+   def test(ref int[] z):
+      int[] u
+      u := new int[5]
+      z := u
+      u[4] := 42
+   end
+
+   int []x, y
+   x := new int[5]
+   x[4] := 17
+   test(x)
+   puti(x[4])
+end

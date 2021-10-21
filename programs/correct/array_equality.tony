@@ -1,0 +1,10 @@
+def main():
+   int []x, y
+   x := new int[5]
+   y := new int[5]
+   x[0] := 17
+   y[0] := 420
+   x := y
+   y[0] := 42
+   puti(x[0])
+end

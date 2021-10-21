@@ -1,0 +1,10 @@
+def main():
+   int[] z
+   def test(int[] x):
+      x := new int[5]
+   end
+   z := new int[5]
+   z[3] := 42
+   test(z)
+   puti(z[3])
+end

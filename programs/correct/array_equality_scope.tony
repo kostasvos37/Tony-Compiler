@@ -1,0 +1,13 @@
+def main():
+   int []z, y
+   def test():
+      int[] u
+      u := new int[5]
+      z := u
+      u[4] := 42
+   end
+   z := new int[5]
+   z[4] := 17
+   test()
+   puti(z[4])
+end

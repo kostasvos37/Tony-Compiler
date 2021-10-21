@@ -1681,28 +1681,16 @@ public:
     }
 
     // Iterating through previous Scope args (all references)
-    for (auto par: previousScopeArgs){
-
-      if(blocks.back()->isRef(par.first)){
+    for (auto par: previousScopeArgs) {
+      if(blocks.back()->isRef(par.first)) {
         v = Builder.CreateLoad(blocks.back()->getAddr(par.first));
-      }else{
+      } else {
         v =  blocks.back()->getVal(par.first);
-      } 
-      /* 
-      ArrayElement* arr_elem = dynamic_cast<ArrayElement*>(parameter_exprs[index]);
-        if (arr_elem != nullptr) {
-          // Special case, if 'arg' is an array element, e.g: a[0].
-          arr_elem->setPassByValue(false);
-          v = arr_elem->compile();
-        } else {
-          // General case, where 'arg' is a variable
-          auto var = dynamic_cast<Id*> (parameter_exprs[index]);
-          v = blocks.back()->getAddr(var->getName());
-        } */
-        compiled_params.push_back(v);
-        arg++;
-        index++;
       }
+      compiled_params.push_back(v);
+      arg++;
+      index++;
+    }
 
     return Builder.CreateCall(llvm_function, compiled_params);
   }
