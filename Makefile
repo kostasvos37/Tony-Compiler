@@ -1,8 +1,8 @@
 .PHONY: clean distclean default
 
-LLVMCONFIG=llvm-config-12
+LLVMCONFIG=llvm-config-10
 
-CXX=clang++
+CXX=clang++-10
 CXXFLAGS=-Wall -std=c++11 -g `$(LLVMCONFIG) --cxxflags`
 LDFLAGS=`$(LLVMCONFIG) --ldflags --system-libs --libs all`
 
