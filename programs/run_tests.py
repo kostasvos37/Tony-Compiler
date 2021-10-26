@@ -9,7 +9,7 @@ unexpected_errors, expected_correct = [], []
 print("\nRunning correct programs...\n")
 for filename in glob.glob(os.path.join(path_for_correct_tests, '*.tony')):
     compile_to_llvm = subprocess.run(
-        ['./tony', filename],
+        ['./tonyc', filename],
         capture_output=True)
     if (compile_to_llvm.returncode != 0):
         print("Test:", filename, "has a semantic/syntactic error...")
@@ -46,7 +46,7 @@ expected_errors, unexpected_correct = [], []
 print("Running incorrect programs...\n")
 for filename in glob.glob(os.path.join(path_for_incorrect_tests, '*.tony')):
     compile_to_llvm = subprocess.run(
-        ['./tony', filename],
+        ['./tonyc', filename],
         capture_output=True)
     if (compile_to_llvm.returncode != 0):
         expected_errors.append(filename)
