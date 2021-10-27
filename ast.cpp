@@ -143,15 +143,23 @@ void AST::initializeLibraryFunctions(){
     llvm::FunctionType *chrtype = llvm::FunctionType::get(i8, std::vector<llvm::Type *>{i32}, false);
 	  scopes.insertFunc("chr",  llvm::Function::Create(chrtype, llvm::Function::ExternalLinkage, "chr", TheModule.get()));
 
-
-
-    //TODO: int strlen (char [] s)
+    // int strlen (char [] s)
     llvm::FunctionType *strlenType = llvm::FunctionType::get(i32, std::vector<llvm::Type *>{i8->getPointerTo()}, false);
 	  scopes.insertFunc("strlen",  llvm::Function::Create(strlenType, llvm::Function::ExternalLinkage, "strlen", TheModule.get()));
+    
+    // int strcmp (char[] s1, s2)
+    llvm::FunctionType *strcmpType = llvm::FunctionType::get(i32, std::vector<llvm::Type *>{i8->getPointerTo(), i8->getPointerTo()}, false);
+	  scopes.insertFunc("strcmp",  llvm::Function::Create(strcmpType, llvm::Function::ExternalLinkage, "strcmp", TheModule.get()));
 
-    //TODO: int strcmp (char[] s1, s2)
-    //TODO: strcpy (char[] trg, src)
+    // strcpy (char[] trg, src)
+    llvm::FunctionType *strcpyType = llvm::FunctionType::get(voidT, std::vector<llvm::Type *>{i8->getPointerTo(), i8->getPointerTo()}, false);
+	  scopes.insertFunc("strcpy",  llvm::Function::Create(strcpyType, llvm::Function::ExternalLinkage, "strcpy", TheModule.get()));
+
     //TODO: strcat (char[] trg, src)
+    llvm::FunctionType *strcatType = llvm::FunctionType::get(voidT, std::vector<llvm::Type *>{i8->getPointerTo(), i8->getPointerTo()}, false);
+	  scopes.insertFunc("strcat",  llvm::Function::Create(strcatType, llvm::Function::ExternalLinkage, "strcat", TheModule.get()));
+
+
 }
 
 llvm::ConstantInt* AST::c1(bool b) {

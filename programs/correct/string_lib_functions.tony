@@ -1,0 +1,21 @@
+def hello():
+    char [] x, y, z
+    x := new char[5]
+    y := new char[10]
+
+    strcpy(y, "test")
+    strcpy(x, "test")
+    if(not (strcmp(x, "test") = 0)):
+        puti(17)
+    end
+
+    if(not (strlen(x) = 4)):
+        puti(18)
+    end
+
+    strcat(y, x)
+    if(not (strcmp(y, "testtest") = 0)):
+        puti(19)
+    end
+    puti(42)
+end
