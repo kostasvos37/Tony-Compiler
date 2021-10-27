@@ -1,5 +1,31 @@
 #include "ast.hpp"
 
+TonyType* Expr::get_type() {
+    return type;
+}
+
+/* Id */
+
+void Id::set_type(TonyType* t){
+    type = t;
+}
+
+void Id::insertIntoScope(TableType l){
+    st.insert(var, type, l);
+}
+
+void Id::insertIntoParentScope(TableType l){
+    st.insertIntoParentScope(var, type, l);
+}
+
+std::string Id::getName(){
+    return var;
+}
+
+bool Id::isLvalue(){
+    return true;
+}
+
 void Id::sem() {
     SymbolEntry *e = st.lookup(var, T_BOTH);
     if(e == nullptr) {
@@ -15,6 +41,16 @@ void Id::sem() {
     }
 }
 
+/* ArrayElement */
+
+bool ArrayElement::isLvalue() {
+    return true;
+}
+
+std::string ArrayElement::getName(){
+    return atom->getName();
+}
+
 void ArrayElement::sem(){
     atom->sem();
     if(atom->get_type()->get_current_type()!=TYPE_array){
@@ -26,6 +62,16 @@ void ArrayElement::sem(){
     }
 
     type = atom->get_type()->get_nested_type();
+}
+
+/* StringLiteral */
+
+bool StringLiteral::isLvalue() {
+    return false;
+}
+
+std::string StringLiteral::getName() {
+    return strlit;
 }
 
 void StringLiteral::sem(){
@@ -155,21 +201,106 @@ void UnOp::sem(){
     }
 }
 
+/* VarList */
+
+std::pair<TonyType*, int> VarList::getArgs(){
+    std::pair<TonyType*, int> p1;
+    p1.first = type;
+    p1.second = (int) ids.size();
+    return p1;
+}
+
+std::vector<std::string> VarList::getNames(){
+    std::vector<std::string> ret;
+    for (Id * i: ids) ret.push_back(i->getName());
+    return ret;
+}
+
+void VarList::setIsRef(bool b){
+    isRef = b;
+}
+
+/*
+This is a method that is called in `parser.y` to set the type of the
+`VarList`, after the `ids` vector is filled with all the variables.
+*/
+void VarList::set_type(TonyType* t) {
+    type = t;
+}
+
 void VarList::sem(){
     if(isRef) type->setPassMode(REF);
     for (Id * i : ids) {i->set_type(type); i->insertIntoScope(T_VAR);}
 }       
+
+/* Formal */
+
+std::pair<TonyType*, int> Formal::getArgs() {
+    return var_list->getArgs();
+}
+
+std::vector<std::string> Formal::getNames() {
+    return var_list->getNames();
+}
 
 void Formal::sem(){
     var_list->setIsRef(is_ref);
     var_list->sem();
 }
 
+/* FormalList */
+
+std::vector<TonyType *> FormalList::getArgs(){
+    std::vector<TonyType *> ret;
+    for (Formal *f: formals){
+      std::pair<TonyType*, int> p1 = f->getArgs(); 
+      for (int i=0; i < p1.second; i++){
+        ret.push_back(p1.first);
+      }
+    }
+    return ret;
+}
+
+std::vector<std::string> FormalList::getNames(){
+    std::vector<std::string> ret;
+    for (Formal *f: formals){
+      std::vector<std::string> p1 = f->getNames(); 
+      for (int i=0; i < p1.size(); i++){
+        ret.push_back(p1[i]);
+      }
+    }
+    return ret;
+}
 void FormalList::sem(){
     for (Formal *f: formals) f->sem();
 }
 
 void Header::sem() {}
+
+bool Header::getIsTyped(){
+    return isTyped;
+}
+
+std::string Header::getName(){
+    return id->getName();
+}
+
+std::vector<TonyType *> Header::getArgs(){
+    if(formals)
+        return formals->getArgs();
+    else
+        return std::vector<TonyType *> ();
+}
+std::vector<std::string> Header::getNames(){
+    if(formals)
+        return formals->getNames();
+    else
+        return std::vector<std::string> ();
+}
+
+TonyType *Header::getType() {
+    return type;
+}
 
 void Header::semHeaderDecl(){
     // Get arguments if any
@@ -238,6 +369,7 @@ void Header::semHeaderDef(){
     }
 }
 
+/* Return */
 void Return::sem(){
     ret_expr->sem();
     if(!check_type_equality(ret_expr->get_type(), st.getCurrentScopeReturnType())){
@@ -252,6 +384,16 @@ void Exit::sem(){
     if(t->get_current_type() != TYPE_void){
         error(lineno, "Found 'exit' statement in a typed function.");
     }
+}
+
+/* StmtBody */
+
+bool StmtBody::hasReturnStmt() {
+    return has_return;
+}
+
+bool StmtBody::hasExitStmt() {
+    return has_exit;
 }
 
 void StmtBody::sem(){
@@ -276,6 +418,12 @@ void Skip::sem(){
     // Intentionally left empty
 }
 
+/* If */
+
+bool If::isElse() {
+    return condition == nullptr;
+}
+
 void If::sem(){
 
     if(condition != nullptr) {
@@ -285,6 +433,12 @@ void If::sem(){
         }
     stmt_body->sem();
     if(next_if != nullptr) next_if->sem();
+}
+
+/* SimpleList */
+
+std::vector<Simple *> SimpleList::get_simples_list(){
+    return simples;
 }
 
 void SimpleList::sem() {
@@ -304,8 +458,26 @@ void For::sem(){
     stmt_body->sem();
 }
 
+/* ExprList */
+
+std::vector<Expr*> ExprList::get_expr_list(){
+    return expressions;
+}
+
 void ExprList::sem(){
     for (auto i : expressions) i->sem();
+}
+
+/* FunctionCall */
+
+std::string FunctionCall::getName(){
+    return name->getName();
+}
+bool FunctionCall::isLvalue(){
+    return false;
+}
+void FunctionCall::setLineno(int n){
+    lineno = n;
 }
 
 void FunctionCall::sem(){
@@ -352,6 +524,16 @@ void FunctionDeclaration::sem(){
     }else{
         error(lineno, "Couldn't find function declaration for function \"%s\"", header->getName().c_str());
     }
+}
+
+/* FunctionDefinition */
+
+std::string FunctionDefinition::getName(){
+    return header->getName();
+}
+
+void FunctionDefinition::setIsMain(){
+    isMain = true;
 }
 
 void FunctionDefinition::sem(){

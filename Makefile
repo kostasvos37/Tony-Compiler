@@ -3,7 +3,7 @@
 LLVMCONFIG=llvm-config-10
 
 CXX=clang++-10
-CXXFLAGS=-Wall -std=c++11 -g `$(LLVMCONFIG) --cxxflags`
+CXXFLAGS=-Wall -Wunused-function -Wunneeded-internal-declaration -std=c++11 -g `$(LLVMCONFIG) --cxxflags` 
 LDFLAGS=`$(LLVMCONFIG) --ldflags --system-libs --libs all`
 
 default: tonyc

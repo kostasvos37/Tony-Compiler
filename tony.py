@@ -54,12 +54,8 @@ if args.file is None:
     fileIn = "_tmp_.tony"
 
 else:
-    if not args.file.endswith(".tony"):
-        print("Unsupported file type."
-              " Programs must end with extension \".tony\"")
-        exit(1)
     fileIn = args.file
-    filepath = args.file.rsplit('.tony', 1)[0]
+    filepath = args.file.rsplit('.', 1)[0]
     imm_path = filepath+".imm"
     final_path = filepath+".asm"
     executable_path = filepath+".o"

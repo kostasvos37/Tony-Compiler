@@ -301,25 +301,7 @@ inline std::ostream& operator<< (std::ostream &out, AST &t) {
 
 class Expr: public AST {
 public:
-  bool type_check(TonyType* t) {
-    sem();
-    return check_type_equality(t, type);
-  }
-  bool type_check(TypeBlock t) {
-    /*
-     * This is just an overloading of the method above.
-     * It is used for simpler cases.
-    */    
-    sem();
-    return (t == type->get_current_type() && type->get_nested_type() == nullptr);
-  }
-  TonyType* get_type() {
-    /* 
-      We want to be able to access `type` from a pointer to an `Expr`.
-      But `type` is protected, so we need this `public` method.
-    */
-    return type;
-  }
+  TonyType* get_type();
 
   void setLLVMType(llvm::Type* t) {
     LLVMType = t;
@@ -351,28 +333,19 @@ class Simple: public Stmt {
 
 class Id: public Atom {
 public:
-  Id(std::string v): var(v) {}
-  ~Id() {}
+  Id(std::string v);
+  ~Id();
   virtual void printOn(std::ostream &out) override;
 
-  void set_type(TonyType* t){
-    type = t;
-  }
-
-  void insertIntoScope(TableType l){
-    st.insert(var, type, l);
-  }
-
-  void insertIntoParentScope(TableType l){
-    st.insertIntoParentScope(var, type, l);
-  }
-
-  virtual std::string getName() override{
-    return var;
-  }
-
+  // Semantic
+  void set_type(TonyType* t);
+  void insertIntoScope(TableType l);
+  void insertIntoParentScope(TableType l);
+  virtual std::string getName() override;
+  virtual bool isLvalue() override;
   virtual void sem() override; 
 
+  // Compile
   virtual llvm::Value *compile() override{
     if(!blocks.back()->isRef(var)){
       // By value variable
@@ -385,31 +358,22 @@ public:
       return Builder.CreateLoad(addr);
     }
   } 
-
-  virtual bool isLvalue() override{
-    return true;
-  }
 private:
   std::string var;
 };
 
 class ArrayElement: public Atom {
 public:
-  ArrayElement(Atom *a, Expr *e): atom(a), expr(e) {
-    pass_by_value=true;
-  }
-  ~ArrayElement() {delete atom; delete expr;}
+  ArrayElement(Atom *a, Expr *e);
+  ~ArrayElement();
   virtual void printOn(std::ostream &out) override;
+
+  // Semantic
+  virtual bool isLvalue() override;
+  virtual std::string getName() override;
   virtual void sem() override;
 
-  virtual bool isLvalue() override{
-    return true;
-  }
-
-  virtual std::string getName() override{
-    return atom->getName();
-  }
-
+  // Compile
   virtual llvm::Value *compile() override{
     llvm::Value* array_index = expr->compile();
     llvm::Value *v, *array;
@@ -447,56 +411,14 @@ private:
 
 class StringLiteral: public Atom {
 public:
-  StringLiteral(std::string str) {
-    int len = str.length();
-    strlit = str;
-    int i = 0; // Iterates over `str`.
-    int j = 0; // Iterates over `strlit`.
-    
-    // We validate the escape characters (e.g: '\n', \0' etc...) in the string.
-    // Initially they are parsed as two separate characters, so we must
-    // squeeze them into a single character.
-    while(i < len) {
-      if(str[i] == '\\') {
-        if(i == len-1) {
-          yyerror("Invalid backslash at the end of string literal.");
-        }
-
-        // In this case, we've caught an escape character.
-        switch(str[i+1]) {
-          case 'n':  strlit[j] = '\n'; i+=2; break;
-          case 't':  strlit[j] = '\t'; i+=2; break;
-          case 'r':  strlit[j] = '\r'; i+=2; break;
-          case '0':  strlit[j] = '\0'; i+=2; break;
-          case '\\': strlit[j] = '\\'; i+=2; break;
-          case '\'': strlit[j] = '\''; i+=2; break;
-          case '\"': strlit[j] = '\"'; i+=2; break;
-          case 'x':  strlit[j] = char(stoi(str.substr(i+2, 2), 0, 16)); i+=4; break;
-        default:
-          yyerror("Invalid escape character in string literal.");
-        }
-      } else {
-        // In this case, we've caught a regular character.
-        strlit[j] = str[i];
-        i++;
-      }
-      j++;
-    }
-
-    // We throw away the trailing unused characters.
-    strlit = strlit.substr(0, j);
-  }
-  ~StringLiteral () {}
+  StringLiteral(std::string str);
+  ~StringLiteral ();
   virtual void printOn(std::ostream &out) override;
+
+  // Semantic
   virtual void sem() override;
-
-  virtual bool isLvalue() override{
-    return false;
-  }
-
-  virtual std::string getName() override{
-    return strlit;
-  }
+  virtual bool isLvalue() override;
+  virtual std::string getName() override;
 
   virtual llvm::Value *compile() override{
     llvm::Value* p =
@@ -517,8 +439,8 @@ private:
 
 class CharConst: public Expr {
 public:
-  CharConst(unsigned char c): char_const(c) {}
-  ~CharConst() {}
+  CharConst(unsigned char c);
+  ~CharConst() ;
   virtual void printOn(std::ostream &out) override;
   virtual void sem() override;
 
@@ -531,8 +453,8 @@ private:
 
 class IntConst: public Expr {
 public:
-  IntConst(int n): num(n) {}
-  ~IntConst() {}
+  IntConst(int n);
+  ~IntConst();
   virtual void printOn(std::ostream &out) override;
   virtual void sem() override;
 
@@ -545,8 +467,8 @@ private:
 
 class New: public Expr {
 public:
-  New(TonyType *t, Expr *right): type_of_elems(t), expr(right) {}
-  ~New() {delete type_of_elems; delete expr;}
+  New(TonyType *t, Expr *right);
+  ~New();
   virtual void printOn(std::ostream &out) override;
 
   virtual void sem() override;
@@ -571,8 +493,8 @@ private:
  */
 class Nil: public Expr {
 public:
-  Nil() {}
-  ~Nil() {}
+  Nil() ;
+  ~Nil() ;
   virtual void printOn(std::ostream &out) override;
   virtual void sem() override;
   virtual llvm::Value *compile() override{
@@ -582,11 +504,8 @@ public:
 
 class Boolean: public Expr {
 public:
-  Boolean(std::string b1): boolean_value(b1) {
-    if (b1=="true") b=true;
-    else b=false;
-  }
-  ~Boolean() {}
+  Boolean(std::string b1);
+  ~Boolean();
   virtual void printOn(std::ostream &out) override;
   virtual void sem() override;
 
@@ -600,8 +519,8 @@ private:
 
 class BinOp: public Expr {
 public:
-  BinOp(Expr *l, std::string o, Expr *r): left(l), op(o), right(r) {}
-  ~BinOp() { delete left; delete right; }
+  BinOp(Expr *l, std::string o, Expr *r);
+  ~BinOp();
   virtual void printOn(std::ostream &out) override;
   virtual void sem() override;
 
@@ -651,8 +570,8 @@ private:
 
 class UnOp: public Expr {
 public:
-  UnOp(std::string(o), Expr *r): op(o), right(r) {}
-  ~UnOp() { delete right; }
+  UnOp(std::string(o), Expr *r);
+  ~UnOp();
   virtual void printOn(std::ostream &out) override;
   virtual void sem() override;
 
@@ -700,28 +619,22 @@ private:
 
 class VarList: public AST {
 public:
-  VarList() {}
-  ~VarList() {
-    for (Id * i : ids) delete i;
-  }
+  VarList() ;
+  ~VarList() ;
+  virtual void printOn(std::ostream &out) override;
+  void append(Id * id);
+  void reverse();
 
-  void append(Id * id) {
-    ids.push_back(id);
-  }
-  
-  void reverse() {
-    std::reverse(ids.begin(), ids.end());
-  }
-  
+  // Semantic
+  std::pair<TonyType*, int> getArgs();
+  std::vector<std::string> getNames();
+  void setIsRef(bool b);
+
   /*
    This is a method that is called in `parser.y` to set the type of the
    `VarList`, after the `ids` vector is filled with all the variables.
    */
-  void set_type(TonyType* t) {
-    type = t;
-  }
-
-  virtual void printOn(std::ostream &out) override;
+  void set_type(TonyType* t);
   virtual void sem() override;
 
   virtual llvm::Value *compile() override{
@@ -736,23 +649,6 @@ public:
     return nullptr;
   }
 
-  std::pair<TonyType*, int> getArgs(){
-    std::pair<TonyType*, int> p1;
-    p1.first = type;
-    p1.second = (int) ids.size();
-    return p1;
-  }
-
-  std::vector<std::string> getNames(){
-    std::vector<std::string> ret;
-    for (Id * i: ids) ret.push_back(i->getName());
-    return ret;
-  }
-
-  void setIsRef(bool b){
-    isRef = b;
-  }
-
 protected:
   std::vector<Id *> ids;
   TonyType* type;
@@ -761,19 +657,14 @@ protected:
 
 class Formal: public AST {
 public:
-  Formal(VarList* v, bool i): var_list(v), is_ref(i) {}
-  ~Formal() {delete var_list;}
+  Formal(VarList* v, bool i);
+  ~Formal() ;
   virtual void printOn(std::ostream &out) override;
   
+  // Semantic
+  std::pair<TonyType*, int> getArgs() ;
+  std::vector<std::string> getNames();
   virtual void sem() override;
-
-  std::pair<TonyType*, int> getArgs() {
-    return var_list->getArgs();
-  }
-
-  std::vector<std::string> getNames() {
-    return var_list->getNames();
-  }
 
   // Not implemented yet
   virtual llvm::Value *compile() override{
@@ -786,78 +677,49 @@ private:
 
 class FormalList: public AST {
 public:
-  FormalList() {}
-  ~FormalList() {
-    for (Formal * f : formals) delete f;
-  }
+  FormalList() ;
+  ~FormalList() ;
 
-  void append(Formal * f) {
-    formals.push_back(f);
-  }
-
-  void reverse(){
-    std::reverse(formals.begin(), formals.end());
-  }
-
+  void append(Formal * f);
+  void reverse();
   virtual void printOn(std::ostream &out) override;
+
+  // Semantic
   virtual void sem() override;
+  std::vector<TonyType *> getArgs();
+  std::vector<std::string> getNames();
 
   // Not implemented yet
   virtual llvm::Value *compile() override{
     return nullptr;
   } 
 
-  //This is fine, don't need pointers
-  std::vector<TonyType *> getArgs(){
-    std::vector<TonyType *> ret;
-    for (Formal *f: formals){
-      std::pair<TonyType*, int> p1 = f->getArgs(); 
-      for (int i=0; i < p1.second; i++){
-        ret.push_back(p1.first);
-      }
-    }
-
-    return ret;
-  }
-
-  std::vector<std::string> getNames(){
-    std::vector<std::string> ret;
-    for (Formal *f: formals){
-      std::vector<std::string> p1 = f->getNames(); 
-      for (int i=0; i < p1.size(); i++){
-        ret.push_back(p1[i]);
-      }
-    }
-
-    return ret;
-  }
+  
 private:
   std::vector<Formal *> formals;
 };
 
 class Header: public AST {
 public:
-  Header(TonyType *t, Id *name, FormalList *f): type(t), formals(f), id(name), isTyped(true) {}
-  Header(Id *name, FormalList *f): formals(f), id(name), isTyped(false) {type = new TonyType(TYPE_void, nullptr);}
-  ~Header(){ delete formals; delete id;}
+  Header(TonyType *t, Id *name, FormalList *f);
+  Header(Id *name, FormalList *f);
+  ~Header();
   virtual void sem() override;
   virtual void printOn(std::ostream &out) override;
 
-  TonyType *getType() {return type;}
+  
 
+  // Semantic
   // To handle declarations and definitions
   // The way it is structured, the function adds its own header to above function's scope
   // Declarations have headers too, but need to insert on same scope, hence 2 different sem() functions
   void semHeaderDecl();
   void semHeaderDef();
-
-  bool getIsTyped(){
-    return isTyped;
-  }
-
-  std::string getName(){
-    return id->getName();
-  }
+  bool getIsTyped();
+  std::string getName();
+  std::vector<TonyType *> getArgs();
+  std::vector<std::string> getNames();
+  TonyType *getType();
 
   virtual llvm::Function *compile() override{
     
@@ -886,20 +748,6 @@ public:
     return F;
   } 
 
-  std::vector<TonyType *>   getArgs(){
-    if(formals)
-      return formals->getArgs();
-    else
-      return std::vector<TonyType *> ();
-  }
-  std::vector<std::string> getNames(){
-    if(formals)
-      return formals->getNames();
-    else
-      return std::vector<std::string> ();
-  }
-
-
 private:
   TonyType *type;
   FormalList *formals;
@@ -909,8 +757,8 @@ private:
 
 class Return: public Stmt{
 public:
-  Return(Expr* e): ret_expr(e) {}
-  ~Return() {delete ret_expr;}
+  Return(Expr* e);
+  ~Return();
   virtual void printOn(std::ostream &out) override;
 
   virtual void sem() override;
@@ -934,7 +782,8 @@ private:
 
 class Exit: public Stmt{
 public:
-  Exit() {}
+  Exit() ;
+  ~Exit();
   virtual void printOn(std::ostream &out) override;
 
   virtual void sem() override;
@@ -944,26 +793,15 @@ public:
 
 class StmtBody: public AST {
 public:
-  StmtBody(): stmts(), has_return(false), has_exit(false) {}
-  ~StmtBody() {for (Stmt *s : stmts) delete s;}
-  
-  bool hasReturnStmt() {
-    return has_return;
-  }
-
-  bool hasExitStmt() {
-    return has_exit;
-  }
-
-  void append(Stmt* stmt) {
-    stmts.push_back(stmt);
-  }
-
-  void reverse(){
-    std::reverse(stmts.begin(), stmts.end());
-  }
-
+  StmtBody();
+  ~StmtBody() ;
+  void append(Stmt* stmt);
+  void reverse();
   virtual void printOn(std::ostream &out) override;
+  
+  // Semantic
+  bool hasReturnStmt() ;
+  bool hasExitStmt() ;
   virtual void sem() override;
 
   virtual llvm::Value *compile() override{
@@ -994,8 +832,8 @@ private:
 
 class Assign: public Simple {
 public:
-  Assign(Atom *a, Expr *e): atom(a), expr(e) {}
-  ~Assign() {delete atom; delete expr;}
+  Assign(Atom *a, Expr *e);
+  ~Assign();
   virtual void printOn(std::ostream &out) override;
   virtual void sem() override;
 
@@ -1038,8 +876,8 @@ private:
 
 class Skip: public Simple {
 public:
-  Skip() {}
-  ~Skip() {}
+  Skip() ;
+  ~Skip();
   
   virtual void printOn(std::ostream &out) override;
 
@@ -1056,23 +894,15 @@ public:
  */
 class If: public Stmt {
 public:
-  If(Expr* if_condition, StmtBody* if_stmt_body, If* next):
-    condition(if_condition) ,stmt_body(if_stmt_body), next_if(next) {}
-  ~If() {
-    delete condition;
-    delete stmt_body; 
-    if(next_if != nullptr) delete next_if;
-  }
+  If(Expr* if_condition, StmtBody* if_stmt_body, If* next);
+  ~If() ;
   virtual StmtBody* getStmtBody() {
     return stmt_body;
   }
-
-  virtual bool isElse() {
-    return condition == nullptr;
-  }
-
   virtual void printOn(std::ostream &out) override;
 
+  // Semantic
+  virtual bool isElse();
   virtual void sem() override;
 
   // TODO: Currently we create a `MergeBB` for each `if`/`elisf`/`else`
@@ -1153,20 +983,15 @@ private:
 
 class SimpleList: public AST {
 public:
-  SimpleList(): simples() {}
-  ~SimpleList() { for (Simple *s : simples) delete s; }
+  SimpleList() ;
+  ~SimpleList() ;
 
-  void append(Simple *s) { simples.push_back(s); }
-
-  void reverse(){
-    std::reverse(simples.begin(), simples.end());
-  }
-
+  void append(Simple *s);
+  void reverse();
   virtual void printOn(std::ostream &out) override;
-  std::vector<Simple *> get_simples_list(){
-    return simples;
-  }
-
+  
+  // Semantic
+  std::vector<Simple *> get_simples_list();
   virtual void sem() override;
 
   virtual llvm::Value *compile() override{
@@ -1181,14 +1006,8 @@ private:
 
 class For: public Stmt {
 public:
-  For(SimpleList *sl1, Expr *e, SimpleList *sl2, StmtBody *sb):
-    initializations(sl1), condition(e), steps(sl2), stmt_body(sb) {}
-  ~For() {
-    delete initializations;
-    delete condition;
-    delete steps;
-    delete stmt_body;
-  }
+  For(SimpleList *sl1, Expr *e, SimpleList *sl2, StmtBody *sb);
+  ~For() ;
 
   virtual void printOn(std::ostream &out) override;
 
@@ -1234,21 +1053,15 @@ private:
 
 class ExprList: public AST {
 public:
-  ExprList(): expressions() {}
-  ~ExprList() { for (Expr *e : expressions) delete e; }
-
-  void append(Expr *e) { expressions.push_back(e); };
-
-  void reverse(){
-    std::reverse(expressions.begin(), expressions.end());
-  }
-
+  ExprList();
+  ~ExprList() ;
   virtual void printOn(std::ostream &out) override;
 
-  std::vector<Expr*> get_expr_list(){
-    return expressions;
-  }
+  void append(Expr *e);
+  void reverse();
 
+  // Semantic
+  std::vector<Expr*> get_expr_list();
   virtual void sem() override;
 
   // This DOESN'T need to be implemented.
@@ -1262,19 +1075,16 @@ private:
 
 class FunctionCall: public Simple, public Atom {
 public:
-  FunctionCall(Id *n): name(n), hasParams(false) {}
-  FunctionCall(Id *n, ExprList *el): name(n), params(el), hasParams(true) {}
-  ~FunctionCall() {delete name; if (hasParams) delete params;}
+  FunctionCall(Id *n);
+  FunctionCall(Id *n, ExprList *el);
+  ~FunctionCall();
   virtual void printOn(std::ostream &out) override;
-  virtual void sem() override;
 
-  virtual bool isLvalue() override{
-    return false;
-  }
-  
-  void setLineno(int n) override{
-    lineno = n;
-  }
+  // Semantic
+  virtual std::string getName() override;
+  virtual bool isLvalue() override;
+  void setLineno(int n) override;
+  virtual void sem() override;
 
   llvm::Value* compile() override{
     llvm::Function* llvm_function = scopes.getFun(name->getName());
@@ -1345,9 +1155,6 @@ public:
     return Builder.CreateCall(llvm_function, compiled_params);
   }
 
-  virtual std::string getName() override{
-    return name->getName();
-  }
 
 private:
   Id *name;
@@ -1358,13 +1165,12 @@ private:
 
 class FunctionDeclaration: public AST {
 public:
-  FunctionDeclaration(Header *hd): header(hd){}
-  ~FunctionDeclaration() {delete header;}
+  FunctionDeclaration(Header *hd);
+  ~FunctionDeclaration();
   virtual void printOn(std::ostream &out) override;
 
   virtual void sem() override;
 
-  // Not implemented yet
   virtual llvm::Value *compile() override{
     RuntimeBlock* newBlock = new RuntimeBlock();
     blocks.push_back(newBlock);
@@ -1410,38 +1216,21 @@ private:
 
 class FunctionDefinition: public AST {
 public:
-  FunctionDefinition(): header(), body(){}
-  ~FunctionDefinition() {
-    delete header; delete body;
-    for (AST *a : local_definitions) delete a;
-  }
+  FunctionDefinition();
+  ~FunctionDefinition();
 
-  void initFunctions();
-  std::string getName(){
-    return header->getName();
-  }
-
-  void append(AST* a) {
-    local_definitions.push_back(a);
-  }
-
-  void merge(Header *hd, StmtBody *st) {
-
-    header = hd;
-    body = st;
-  }
-
-  void reverse(){
-    std::reverse(local_definitions.begin(), local_definitions.end());
-  }
-
+  void append(AST* a) ;
+  void merge(Header *hd, StmtBody *st);
+  void reverse();
   virtual void printOn(std::ostream &out) override;
 
+  // Semantic
+  void initFunctions();
+  std::string getName();
+  void setIsMain();
   virtual void sem() override;
 
-  void setIsMain(){
-    isMain = true;
-  }
+  
 
   llvm::Value* compile() override{
 
