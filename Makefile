@@ -22,9 +22,16 @@ tonyc: lexer.o parser.o ast.o semantic.o error.o parsing.o
 	$(CXX) $(CXXFLAGS) -o tonyc type.cpp $^ $(LDFLAGS)
 
 clean:
-	$(RM) lexer.cpp parser.cpp parser.hpp parser.output *.o *.hpp.gch tonyc
+	$(RM) lexer.cpp parser.cpp parser.hpp parser.output *.o *.hpp.gch
+
+
+distclean:
+	$(RM) tonyc
 
 # This, additionally, cleans the ".asm", ".imm", ".ll", ".o" that are produced
 # when running a test program inside the Tony-Compiler directory.
-distclean:
+cleanall: distclean
+	find . -regex '.*\.\(asm\|imm\|ll\|o\)' -type f -delete
+
+cleanintermidiate:
 	find . -regex '.*\.\(asm\|imm\|ll\|o\)' -type f -delete
