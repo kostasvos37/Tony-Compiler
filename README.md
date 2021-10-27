@@ -16,7 +16,7 @@ The Tony Compiler was developed and tested in a Linux-Ubuntu environment.
 - Change directories to the folder of the project: `cd <your-base-dir>/Tony-Compiler`
 - Run: `make tonyc` to create the `./tonyc` executable.
 - Run: `chmod +x tony` so you can run the `tony` script.
-- Run: `./tony <tony-program>.tony`. A `<tony-program>.o` file is produced in the directory
+- Run: `./tony <tony-program>.tony`. A `<tony-program>.out` file is produced in the directory
 of your Tony program. In the same directory, you'll also find `<tony-program>.asm` and
 `<tony-program>.imm` files with the produced assembly code and
 intermediate code of your program.
@@ -27,15 +27,15 @@ Also the script accepts the flags `-O`, `-f` and `-i`:
   - `-h` is for help / usage instructions.
 
   So, in this case you can run: `./tony -O -f -i <tony-program>.tony`.
-- Run your program executable: `./<tony-program>.o`.
+- Run your program executable: `./<tony-program>.out`.
 
 ### Manually Compile a Tony Program (`tonyc` executable)
 - Change directories to the folder of the project: `cd <your-base-dir>/Tony-Compiler`
 - Run: `make tonyc` to create the `./tonyc` executable.
 - Run: `./tonyc <tony-program>.tony` to produce the LLVM code of your program.
   A file called `out.ll` is created, and it contains the LLVM code.
-- Run: `clang-10 out.ll lib.a -o <desired-name>.o -lgc` to produce the binary executable of your program.
-- Run your program executable: `./<desired-name>.o`.
+- Run: `clang-10 out.ll lib.a -o <desired-name>.out -lgc` to produce the binary executable of your program.
+- Run your program executable: `./<desired-name>.out`.
 
 ### Run Tests
 - Change directories to the folder of the compiler: `cd <tony-compiler-dir>`
