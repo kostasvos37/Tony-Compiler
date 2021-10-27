@@ -1279,13 +1279,13 @@ public:
     // LoopBB : compiling steps and checking condition  
     Builder.SetInsertPoint(LoopBB);
     stmt_body->compile();
-    
-    steps->compile();
+    if(!stmt_body->hasReturnStmt() && !stmt_body->hasExitStmt()) {
+      steps->compile();
+      cond = condition->compile();
+      cond = Builder.CreateICmpNE(cond, c1(0), "loopcond");    
+      Builder.CreateCondBr(cond, LoopBB, AfterBB);
+    }
 
-    cond = condition->compile();
-    cond = Builder.CreateICmpNE(cond, c1(0), "loopcond");    
-    Builder.CreateCondBr(cond, LoopBB, AfterBB);
-  
     //Emit Merge Block
     TheFunction->getBasicBlockList().push_back(AfterBB);
     Builder.SetInsertPoint(AfterBB);

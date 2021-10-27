@@ -1,0 +1,9 @@
+def hello():
+    int i
+    i:=2
+    for i:=0; i<2; i := i+1:
+        puti(42)
+        exit
+    end
+    puti(17)
+end
