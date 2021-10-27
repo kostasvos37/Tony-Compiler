@@ -29,8 +29,8 @@ of your Tony program. In the same directory, you'll also find `<tony-program>.as
 intermediate code of your program.
 Also the script accepts the flags `-O`, `-f` and `-i`:
   - `-O` is for optimizations.
-  - `-f` is to print the final machine code in `stdout`.
-  - `-i` is to print the LLVM IR to `stdout`.
+  - `-f` is for reading the Tony program from `stdin` and printing the final machine code in `stdout`.
+  - `-i` is for reading the Tony program from `stdin` and printing the LLVM IR to `stdout`.
 
   So, in this case you can run: `./tony -O -f -i <tony-program>.tony`.
 - Run your program executable: `./<tony-program>.o`.
