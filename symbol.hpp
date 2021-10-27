@@ -40,7 +40,10 @@ public:
     }
         
     void insertVar(std::string c, TonyType* t){
-        if (locals.find(c) != locals.end()) yyerror("Variable already declared");
+        if (locals.find(c) != locals.end()){ 
+            yyerror("Variable already declared", c.c_str());
+
+        }
         locals[c] = SymbolEntry(t);
         ++size;
     }

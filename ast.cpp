@@ -87,9 +87,15 @@ void AST::optimizeModule(){
     if (true) {
       TheFPM->add(llvm::createPromoteMemoryToRegisterPass());
       TheFPM->add(llvm::createInstructionCombiningPass());
+      TheFPM->add(llvm::createDeadCodeEliminationPass());
       TheFPM->add(llvm::createReassociatePass());
       TheFPM->add(llvm::createGVNPass());
       TheFPM->add(llvm::createCFGSimplificationPass());
+      TheFPM->add(llvm::createLoopDeletionPass());
+      TheFPM->add(llvm::createLoopIdiomPass());
+      TheFPM->add(llvm::createLoopUnrollPass());
+      TheFPM->add(llvm::createLoopUnswitchPass());
+      TheFPM->add(llvm::createSCCPPass());
     }
     TheFPM->doInitialization();
 

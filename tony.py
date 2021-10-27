@@ -6,7 +6,7 @@ import shutil
 import os
 
 
-def cleanup():
+def cleanup(deleteExec = True):
     """Clean garbage files."""
     if(os.path.isfile("out.ll")):
         os.remove("out.ll")
@@ -14,11 +14,11 @@ def cleanup():
         os.remove("_tmp_.tony")
     if os.path.isfile("out.s"):
         os.remove("out.s")
-    if os.path.isfile("exec.o"):
-        os.remove("exec.o")
+    if os.path.isfile("exec.out")  and deleteExec == True:
+        os.remove("exec.out")
 
 
-parser = argparse.ArgumentParser(description='Compile tony file')
+parser = argparse.ArgumentParser(description='Compile tony programs.')
 parser.add_argument('-O', dest='O_option', action='store_true',
                     default=False, help="Enable optimizations.")
 parser.add_argument('-f', dest='f_option', action='store_true', default=False,
@@ -28,7 +28,7 @@ parser.add_argument('-i', dest='i_option', action='store_true', default=False,
                     help="Use stdin to input program."
                          " Final code printed on stdout.")
 parser.add_argument('file', type=str, action='store', default=None, nargs="?",
-                    help="Input .tony file")
+                    help="Input tony file (.tony extension not necessary)")
 args = parser.parse_args()
 
 if(not args.f_option and not args.i_option and args.file is None):
@@ -58,7 +58,7 @@ else:
     filepath = args.file.rsplit('.', 1)[0]
     imm_path = filepath+".imm"
     final_path = filepath+".asm"
-    executable_path = filepath+".o"
+    executable_path = filepath+".out"
 
 o_option = "-O" if args.O_option else ""
 
@@ -81,7 +81,7 @@ if p.wait() != 0:
     cleanup()
     exit(1)
 
-p = subprocess.Popen("clang -o exec.o out.s lib.a -lgc",
+p = subprocess.Popen("clang -o exec.out out.s lib.a -lgc",
                      stdout=subprocess.PIPE,
                      stderr=subprocess.PIPE, shell=True)
 output, errors = p.communicate()
@@ -106,6 +106,8 @@ if args.f_option:
 if not args.f_option and not args.i_option:
     shutil.move("out.ll", imm_path)
     shutil.move("out.s", final_path)
-    shutil.move("exec.o", executable_path)
+    shutil.move("exec.out", executable_path)
+    cleanup()
+else:
+    cleanup(False)
 
-cleanup()

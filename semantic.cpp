@@ -480,6 +480,9 @@ void Assign::sem() {
     if(!atom->isLvalue()){
         error(lineno, "Atom is not a valid l-value.");
     }   
+    if(atom->get_type()->get_current_type()==TYPE_function || expr->get_type()->get_current_type()==TYPE_function){
+        error(lineno, "Cannot assign values of type \"function\".");
+    }
 }
 
 /*================================================================================================*/
@@ -589,7 +592,13 @@ void FunctionCall::sem(){
         if(!check_type_equality(args[i],expressions[i]->get_type())){
             error(lineno, "Function call: Expected type \"%s\" for positional argument %d, received \"%s\" instead",
             args[i]->toString().c_str(), i+1, expressions[i]->get_type()->toString().c_str());
-        }      
+        }
+        
+        bool flag1 = (args[i]->get_current_type() != TYPE_array) || (args[i]->get_current_type() != TYPE_list);
+        if(!flag1 && args[i]->getPassMode() == REF && (dynamic_cast<Id*> (expressions[i]) == nullptr)){
+            error(lineno, "Expected parameter pass by reference, received a value that is not a variable.");
+        }
+
     }
     type = name->get_type()->get_return_type();
 
