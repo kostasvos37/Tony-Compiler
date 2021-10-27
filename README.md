@@ -11,15 +11,8 @@ The Tony Compiler was developed and tested in a Linux-Ubuntu environment.
 - _llvm-10_
 - _python_>=`3.7.5` (for running tests and the `tony` bash script)
 
-### Run a Tony Program (`tonyc` executable)
-- Change directories to the folder of the project: `cd <your-base-dir>/Tony-Compiler`
-- Run: `make tonyc` to create the `./tonyc` executable.
-- Run: `./tonyc <tony-program>.tony` to produce the LLVM code of your program.
-  A file called `out.ll` is created, and it contains the LLVM code.
-- Run: `clang-10 out.ll lib.a -o <desired-name>.o -lgc` to produce the binary executable of your program.
-- Run your program executable: `./<desired-name>.o`.
 
-### Alternative Way to Run a Tony Program (`tony` bash script)
+### Run a Tony Program (`tony` bash script)
 - Change directories to the folder of the project: `cd <your-base-dir>/Tony-Compiler`
 - Run: `make tonyc` to create the `./tonyc` executable.
 - Run: `chmod +x tony` so you can run the `tony` script.
@@ -31,10 +24,18 @@ Also the script accepts the flags `-O`, `-f` and `-i`:
   - `-O` is for optimizations.
   - `-f` is for reading the Tony program from `stdin` and printing the final machine code in `stdout`.
   - `-i` is for reading the Tony program from `stdin` and printing the LLVM IR to `stdout`.
+  - `-h` is for help / usage instructions.
 
   So, in this case you can run: `./tony -O -f -i <tony-program>.tony`.
 - Run your program executable: `./<tony-program>.o`.
 
+### Manually Compile a Tony Program (`tonyc` executable)
+- Change directories to the folder of the project: `cd <your-base-dir>/Tony-Compiler`
+- Run: `make tonyc` to create the `./tonyc` executable.
+- Run: `./tonyc <tony-program>.tony` to produce the LLVM code of your program.
+  A file called `out.ll` is created, and it contains the LLVM code.
+- Run: `clang-10 out.ll lib.a -o <desired-name>.o -lgc` to produce the binary executable of your program.
+- Run your program executable: `./<desired-name>.o`.
 
 ### Run Tests
 - Change directories to the folder of the compiler: `cd <tony-compiler-dir>`
