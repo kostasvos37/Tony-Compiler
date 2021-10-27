@@ -18,7 +18,7 @@ parser.hpp parser.cpp: parser.y
 
 parser.o: parser.cpp lexer.hpp error.hpp
 
-tonyc: lexer.o parser.o ast.o semantic.o error.o
+tonyc: lexer.o parser.o ast.o semantic.o error.o parsing.o
 	$(CXX) $(CXXFLAGS) -o tonyc type.cpp $^ $(LDFLAGS)
 
 clean:
