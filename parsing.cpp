@@ -1,6 +1,16 @@
 #include "ast.hpp"
 
-/* Id */
+/*================================================================================================*/
+/*                                            AST                                                 */
+/*================================================================================================*/
+
+void AST::setLineno(int n){
+    lineno = n;
+}
+
+/*================================================================================================*/
+/*                                            Id                                                  */
+/*================================================================================================*/
 
 Id::Id(std::string v): var(v) {}
 Id::~Id() {}
@@ -8,8 +18,10 @@ void Id::printOn(std::ostream &out) {
     out << "<Id name=\"" << var << "\"> ";
 }
 
+/*================================================================================================*/
+/*                                        ArrayElement                                            */
+/*================================================================================================*/
 
-/*Array Element */
 ArrayElement::ArrayElement(Atom *a, Expr *e): atom(a), expr(e) {
     pass_by_value=true;
 }
@@ -22,7 +34,9 @@ void ArrayElement::printOn(std::ostream &out) {
     out << "\n<ArrayElement>\n" << *atom << "\n" << *expr << "\n</ArrayElement>\n";
 }
 
-/* String Literal */
+/*================================================================================================*/
+/*                                        StringLiteral                                           */
+/*================================================================================================*/
 
 StringLiteral::StringLiteral(std::string str) {
     int len = str.length();
@@ -69,7 +83,9 @@ void StringLiteral::printOn(std::ostream &out) {
     out << "<String value=\"" << strlit << "\"> ";
   }
 
-/* CharConst */
+/*================================================================================================*/
+/*                                        CharConst                                               */
+/*================================================================================================*/
 
 CharConst::CharConst(unsigned char c): char_const(c) {}
 CharConst::~CharConst() {}
@@ -78,7 +94,9 @@ void CharConst::printOn(std::ostream &out) {
     out << "<CharConst value='"<< char_const << "\' ascii="<< (int) char_const << "> ";
 }
 
-/* IntConst */
+/*================================================================================================*/
+/*                                        IntConst                                                */
+/*================================================================================================*/
 
 IntConst::IntConst(int n): num(n) {}
 IntConst::~IntConst() {}
@@ -87,7 +105,9 @@ void IntConst::printOn(std::ostream &out) {
     out << "<IntConst value=" << num << "> ";
 }
 
-/* New */
+/*================================================================================================*/
+/*                                          New                                                   */
+/*================================================================================================*/
 
 New::New(TonyType *t, Expr *right): type_of_elems(t), expr(right) {}
 New::~New() {
@@ -99,8 +119,9 @@ void New::printOn(std::ostream &out)  {
     out << "<New> " << type_of_elems << *expr << "</New> ";
 }
 
-
-/* Nil */
+/*================================================================================================*/
+/*                                          Nil                                                   */
+/*================================================================================================*/
 
 Nil::Nil() {}
 Nil::~Nil() {}
@@ -109,7 +130,9 @@ void Nil::printOn(std::ostream &out)  {
     out << "<Nil> ";
 }
 
-/* Boolean */
+/*================================================================================================*/
+/*                                         Boolean                                                */
+/*================================================================================================*/
 
 Boolean::Boolean(std::string b1): boolean_value(b1) {
     if (b1=="true") b=true;
@@ -121,7 +144,9 @@ void Boolean::printOn(std::ostream &out)  {
     out << "<Boolean value=" << boolean_value << "> ";  
 }
 
-/* BinOp */
+/*================================================================================================*/
+/*                                          BinOp                                                 */
+/*================================================================================================*/
 
 BinOp::BinOp(Expr *l, std::string o, Expr *r): left(l), op(o), right(r) {}
 BinOp::~BinOp() { 
@@ -133,7 +158,9 @@ void BinOp::printOn(std::ostream &out)  {
     out << "\n<Binop op=\"" << op << "\">\n" << *left << *right << "\n</BinOp>\n";
 }
 
-/* UnOP */
+/*================================================================================================*/
+/*                                           UnOp                                                 */
+/*================================================================================================*/
 
 UnOp::UnOp(std::string(o), Expr *r): op(o), right(r) {}
 UnOp::~UnOp() { 
@@ -144,7 +171,9 @@ void UnOp::printOn(std::ostream &out)  {
     out << "\n<UnOp op=\"" << op << "\">\n" << *right << "\n</UnOp>\n";
 }
 
-/* VarList */
+/*================================================================================================*/
+/*                                           VarList                                              */
+/*================================================================================================*/
 
 VarList::VarList() {}
 VarList::~VarList() {
@@ -168,7 +197,9 @@ void VarList::printOn(std::ostream &out)  {
     out << "\n</VarList>\n";
 }
 
-/* Formal */
+/*================================================================================================*/
+/*                                           Formal                                               */
+/*================================================================================================*/
 
 Formal::Formal(VarList* v, bool i): var_list(v), is_ref(i) {}
 Formal::~Formal() {
@@ -179,7 +210,9 @@ void Formal::printOn(std::ostream &out)  {
     out << "\n<Formal isRef=\"" << (is_ref ? "yes" : "no") << "\">\n" << *var_list << "</Formal>";
 }
 
-/* FormalList */
+/*================================================================================================*/
+/*                                         FormalList                                             */
+/*================================================================================================*/
 
 FormalList::FormalList() {}
 FormalList::~FormalList() {
@@ -203,7 +236,9 @@ void FormalList::printOn(std::ostream &out)  {
     out << "\n</FormalList>\n";
 }
 
-/* Header */
+/*================================================================================================*/
+/*                                           Header                                               */
+/*================================================================================================*/
 
 Header::Header(TonyType *t, Id *name, FormalList *f): type(t), formals(f), id(name), isTyped(true) {}
 Header::Header(Id *name, FormalList *f): formals(f), id(name), isTyped(false) {
@@ -229,7 +264,9 @@ void Header::printOn(std::ostream &out)  {
     out << "\n</Header>\n";
 }
 
-/* Return */
+/*================================================================================================*/
+/*                                           Return                                               */
+/*================================================================================================*/
 
 Return::Return(Expr* e): ret_expr(e) {}
 Return::~Return() {
@@ -240,7 +277,9 @@ void Return::printOn(std::ostream &out)  {
     out << "\n<Return>\n" << *ret_expr << "\n</Return>\n";
 }
 
-/* Exit */
+/*================================================================================================*/
+/*                                           Exit                                                 */
+/*================================================================================================*/
 
 Exit::Exit() {}
 Exit::~Exit() {}
@@ -249,7 +288,9 @@ void Exit::printOn(std::ostream &out)  {
     out << "\n<Exit>\n";
 }
 
-/* StmtBody */
+/*================================================================================================*/
+/*                                         StmtBody                                               */
+/*================================================================================================*/  
 
 StmtBody::StmtBody(): stmts(), has_return(false), has_exit(false) {}
 StmtBody::~StmtBody() {
@@ -272,7 +313,9 @@ void StmtBody::printOn(std::ostream &out)  {
     out << "\n</StmtBody>\n";
 }
 
-/* Assign */
+/*================================================================================================*/
+/*                                          Assign                                                */
+/*================================================================================================*/ 
 
 Assign::Assign(Atom *a, Expr *e): atom(a), expr(e) {}
 Assign::~Assign() {
@@ -284,7 +327,9 @@ void Assign::printOn(std::ostream &out)  {
     out << "\n<Assign>\n" << *atom << *expr << "\n</Assign>\n";
 }
 
-/* Skip */
+/*================================================================================================*/
+/*                                           Skip                                                 */
+/*================================================================================================*/ 
 
 Skip::Skip() {}
 Skip::~Skip() {}
@@ -293,7 +338,9 @@ void Skip::printOn(std::ostream &out)  {
     out << "\n<Skip>\n";
 }
 
-/* If */
+/*================================================================================================*/
+/*                                            If                                                  */
+/*================================================================================================*/ 
 
 If::If(Expr* if_condition, StmtBody* if_stmt_body, If* next):
     condition(if_condition) ,stmt_body(if_stmt_body), next_if(next) {}
@@ -312,7 +359,9 @@ void If::printOn(std::ostream &out)  {
     out << "\n</If>\n";
 }
 
-/* SimpleList */
+/*================================================================================================*/
+/*                                        SimpleList                                              */
+/*================================================================================================*/
 
 SimpleList::SimpleList(): simples() {}
 SimpleList::~SimpleList() { 
@@ -335,7 +384,9 @@ void SimpleList::printOn(std::ostream &out)  {
     out << "\n</SimpleList>\n";
 }
 
-/* For */
+/*================================================================================================*/
+/*                                            For                                                 */
+/*================================================================================================*/
 
 For::For(SimpleList *sl1, Expr *e, SimpleList *sl2, StmtBody *sb):
     initializations(sl1), condition(e), steps(sl2), stmt_body(sb) {}
@@ -350,7 +401,9 @@ void For::printOn(std::ostream &out)  {
     out << "\n<For>\n" << *initializations << *condition << *steps  << *stmt_body << "\n</For>\n";
 }
 
-/* ExprList */
+/*================================================================================================*/
+/*                                          ExprList                                              */
+/*================================================================================================*/ 
 
 ExprList::ExprList(): expressions() {}
 ExprList::~ExprList() { 
@@ -373,7 +426,9 @@ void ExprList::printOn(std::ostream &out)  {
     out << "\n</ExprList>\n";
 }
 
-/* FunctionCall */
+/*================================================================================================*/
+/*                                        FunctionCall                                            */
+/*================================================================================================*/ 
 
 FunctionCall::FunctionCall(Id *n): name(n), hasParams(false) {}
 FunctionCall::FunctionCall(Id *n, ExprList *el): name(n), params(el), hasParams(true) {}
@@ -390,7 +445,9 @@ void FunctionCall::printOn(std::ostream &out)  {
         out << "\n<FunctionCall>\n" << *name << *params << "\n</FunctionCall>\n";
 }
 
-/* FunctionDeclaration */
+/*================================================================================================*/
+/*                                     FunctionDeclaration                                        */
+/*================================================================================================*/
 
 FunctionDeclaration::FunctionDeclaration(Header *hd): header(hd){}
 FunctionDeclaration::~FunctionDeclaration() {
@@ -401,7 +458,9 @@ void FunctionDeclaration::printOn(std::ostream &out)  {
     out << "\n<FunctionDeclaration>\n" << *header << "\n</FunctionDeclaration>\n" ;
 }
 
-/* FunctionDefinition */
+/*================================================================================================*/
+/*                                     FunctionDefinition                                         */
+/*================================================================================================*/
 
 FunctionDefinition::FunctionDefinition(): header(), body(){}
 FunctionDefinition::~FunctionDefinition() {
