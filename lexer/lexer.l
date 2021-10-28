@@ -2,10 +2,10 @@
 #include <cstdio>
 #include <cstdlib>
 #include <stdarg.h>
-#include "ast.hpp"
+#include "../ast.hpp"
 #include "lexer.hpp"
-#include "parser.hpp"
-#include "./error/error.hpp"
+#include "../parser/parser.hpp"
+#include "../error/error.hpp"
 
 int comment_counter = 0;
 int linecount=1;

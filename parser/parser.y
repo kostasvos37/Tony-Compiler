@@ -1,10 +1,10 @@
 %{
 #include <cstdio>
 #include <string.h>
-#include "ast.hpp"
-#include "lexer.hpp"
-#include "symbol/symbol.hpp"
-#include "error/error.hpp"
+#include "../ast.hpp"
+#include "../lexer/lexer.hpp"
+#include "../symbol/symbol.hpp"
+#include "../error/error.hpp"
 
 extern FILE *yyin;
 SymbolTable st;

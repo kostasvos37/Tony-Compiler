@@ -3,26 +3,28 @@
 LLVMCONFIG=llvm-config-10
 
 CXX=clang++-10
-CXXFLAGS=-Wall -Wunused-function -Wunneeded-internal-declaration -std=c++11 -g `$(LLVMCONFIG) --cxxflags` 
+CXXFLAGS=-Wall -Wno-unused-function -Wno-unneeded-internal-declaration -std=c++11 -g `$(LLVMCONFIG) --cxxflags` 
 LDFLAGS=`$(LLVMCONFIG) --ldflags --system-libs --libs all`
 
 default: tonyc
 
-lexer.cpp: lexer.l
-	flex -s -o lexer.cpp lexer.l
+lexer/lexer.cpp: lexer/lexer.l
+	flex -s -o lexer/lexer.cpp lexer/lexer.l
 
-lexer.o: lexer.cpp lexer.hpp parser.hpp error/error.hpp
+lexer/lexer.o: lexer/lexer.cpp lexer/lexer.hpp parser/parser.hpp error/error.hpp
 
-parser.hpp parser.cpp: parser.y
-	bison -dv -o parser.cpp parser.y
+parser/parser.hpp parser/parser.cpp: parser/parser.y
+	bison -dv -o parser/parser.cpp parser/parser.y
 
-parser.o: parser.cpp lexer.hpp error/error.hpp
+parser/parser.o: parser/parser.cpp lexer/lexer.hpp error/error.hpp
 
-tonyc: lexer.o parser.o llvm/ast.o symbol/type.o semantic/semantic.o error/error.o parser/parsing.o
+tonyc: lexer/lexer.o parser/parser.o llvm/ast.o symbol/type.o semantic/semantic.o error/error.o parser/parsing.o
 	$(CXX) $(CXXFLAGS) -o tonyc $^ $(LDFLAGS)
 
 clean:
-	$(RM) lexer.cpp parser.cpp parser.hpp parser.output *.o *.hpp.gch semantic/semantic.o parser/parsing.o error/error.o llvm/ast.o
+	$(RM) lexer/lexer.cpp lexer/lexer.o 
+	$(RM) parser/parser.cpp parser/parser.hpp parser/parser.output parser.o  
+	$(RM) *.o *.hpp.gch type/type.o semantic/semantic.o parser/parsing.o error/error.o llvm/ast.o
 
 distclean:
 	$(RM) tonyc
