@@ -26,7 +26,7 @@ clean:
 	$(RM) parser/parser.cpp parser/parser.hpp parser/parser.output parser.o  
 	$(RM) *.o *.hpp.gch type/type.o semantic/semantic.o parser/parsing.o error/error.o llvm/ast.o
 
-distclean:
+distclean: clean
 	$(RM) tonyc
 
 # This, additionally, cleans the ".asm", ".imm", ".ll", ".o" that are produced
