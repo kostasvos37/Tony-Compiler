@@ -3,8 +3,8 @@
 #include <string.h>
 #include "ast.hpp"
 #include "lexer.hpp"
-#include "symbol.hpp"
-#include "error.hpp"
+#include "symbol/symbol.hpp"
+#include "error/error.hpp"
 
 extern FILE *yyin;
 SymbolTable st;

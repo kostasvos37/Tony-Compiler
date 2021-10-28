@@ -5,7 +5,7 @@
 #include "ast.hpp"
 #include "lexer.hpp"
 #include "parser.hpp"
-#include "error.hpp"
+#include "./error/error.hpp"
 
 int comment_counter = 0;
 int linecount=1;
@@ -28,7 +28,6 @@ W [ \r\t]
 E [ntr0'"\\]|[x][0-9a-f][0-9a-f]
 O [\+\-\*\/\#\=\<\>]
 S [\(\)\[\]\,\;\:]
-P [\x20-\x7e]
 
 %option noyywrap
 %option yylineno

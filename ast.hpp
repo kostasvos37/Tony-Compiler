@@ -10,10 +10,10 @@
 #include <string>
 #include <algorithm>
 #include <memory>
-#include "symbol.hpp"
-#include "runtime.hpp"
-#include "type.hpp"
-#include "error.hpp"
+#include "symbol/symbol.hpp"
+#include "symbol/runtime.hpp"
+#include "symbol/type.hpp"
+#include "error/error.hpp"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/STLExtras.h"
@@ -35,9 +35,6 @@
 #include <llvm/Transforms/Utils.h>
 
 void yyerror(const char *msg, ...);
-
-bool check_type_equality(TonyType* type1, TonyType* type2);
-bool is_nil_constant(TonyType *type);
 
 class AST {
 public:

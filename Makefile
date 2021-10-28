@@ -11,18 +11,18 @@ default: tonyc
 lexer.cpp: lexer.l
 	flex -s -o lexer.cpp lexer.l
 
-lexer.o: lexer.cpp lexer.hpp parser.hpp error.hpp
+lexer.o: lexer.cpp lexer.hpp parser.hpp error/error.hpp
 
 parser.hpp parser.cpp: parser.y
 	bison -dv -o parser.cpp parser.y
 
-parser.o: parser.cpp lexer.hpp error.hpp
+parser.o: parser.cpp lexer.hpp error/error.hpp
 
-tonyc: lexer.o parser.o ast.o semantic.o error.o parsing.o
-	$(CXX) $(CXXFLAGS) -o tonyc type.cpp $^ $(LDFLAGS)
+tonyc: lexer.o parser.o llvm/ast.o symbol/type.o semantic/semantic.o error/error.o parser/parsing.o
+	$(CXX) $(CXXFLAGS) -o tonyc $^ $(LDFLAGS)
 
 clean:
-	$(RM) lexer.cpp parser.cpp parser.hpp parser.output *.o *.hpp.gch
+	$(RM) lexer.cpp parser.cpp parser.hpp parser.output *.o *.hpp.gch semantic/semantic.o parser/parsing.o error/error.o llvm/ast.o
 
 distclean:
 	$(RM) tonyc
